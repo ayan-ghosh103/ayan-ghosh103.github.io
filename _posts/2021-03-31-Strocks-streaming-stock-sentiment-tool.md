@@ -8,13 +8,13 @@ date: 2021-03-31
 [Github_Repo](https://github.com/ayan-ghosh103/streaming-stock-sentiment-tool-Strocks.git)
 
 
-# streaming-stock-sentiment-tool-Strocks
+# -Strocks-
 Stock trading tool using real-time analytics from social media 
 
 ## Goal:
 Provide a tool that allows users to trade safely by analyzing market trends and sentiment on Social Media (Twitter)
 
-## Why tools like Strocks?
+## Why tools will prefer tools like Strocks?
 1. Trading platforms more accessible than ever
 2. Stock market should be based on fundamental analysis, but research shows most movements are related to sentiment
 3. Social Media as a propeller of (fake) news proliferation
