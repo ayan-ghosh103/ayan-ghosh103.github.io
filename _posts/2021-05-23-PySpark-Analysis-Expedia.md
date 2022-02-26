@@ -25,4 +25,5 @@ find the driving factors within this dataset helping to find customer clusters a
 
 ## Analysis deep dive
 The project analysis will be focusing on profiling users, their search characteristics, user location analysis. It will help to understand the customers better, understand how they are distributed geographically, the time when customers are most active and destination profiling. The dataset is analyzed at the beginning, looking into the basic statistics, null values within columns and the datatypes for each column, those which will be dealt with as the analysis proceeds.
+
 [Video_Explanation](https://drive.google.com/file/d/1L42wepjZfFKKEbS9pVgUViS6wGSZp9hL/view?usp=sharing)
