@@ -7,7 +7,7 @@ date: 2021-02-18
 
 [Github_Repo](https://github.com/ayan-ghosh103/Power-Market_prediction.git)
 
-# Power-Market_prediction
+# Power-Market-Prediction
 Predicting Spanish Electricity Prices
 
 The goal of this assignment is to build a Machine Learning model to predict the electricity prices in Spanish Market. 
