@@ -21,19 +21,19 @@ Social Media as a propeller of (fake) news proliferation
 Majority of people (76%) losing money when investing on their own on trading platforms such as eToro, AvaTrade or ZuluTrade (*)
 
 ## Target Users
-- Retail investors
-- Daily traders
-- Equity Researchers
-- Short-term Investors
-- Trading Platform users (eToro, Robinhood…)
+* Retail investors
+* Daily traders
+* Equity Researchers
+* Short-term Investors
+* Trading Platform users (eToro, Robinhood…)
 
 ## Future Scopes
-1. Include Newspapers inputs (Financial Times, Bloomberg, Wall Street Journal…)
-2. Expand Social Media ingestion to new platforms (Reddit, blogs…)
-3. Weightage for influential accounts
-4. Include Cryptocurrencies
-5. Implement Fraud Protection tool (Pump-and-Dump maneuvers on the rise)
-6. Add price manipulation Alert
+* Include Newspapers inputs (Financial Times, Bloomberg, Wall Street Journal…)
+* Expand Social Media ingestion to new platforms (Reddit, blogs…)
+* Weightage for influential accounts
+* Include Cryptocurrencies
+* Implement Fraud Protection tool (Pump-and-Dump maneuvers on the rise)
+* Add price manipulation Alert
 
 Implemented Pipeline:
 ![image](https://user-images.githubusercontent.com/73875467/119923934-4e9c6400-bf90-11eb-860e-3d7357051c25.png)
