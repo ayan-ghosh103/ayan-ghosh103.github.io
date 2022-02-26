@@ -15,17 +15,17 @@ Stock trading tool using real-time analytics from social media
 Provide a tool that allows users to trade safely by analyzing market trends and sentiment on Social Media (Twitter)
 
 ## Why tools will prefer tools like Strocks?
-1. Trading platforms more accessible than ever
-2. Stock market should be based on fundamental analysis, but research shows most movements are related to sentiment
-3. Social Media as a propeller of (fake) news proliferation
-4. Majority of people (76%) losing money when investing on their own on trading platforms such as eToro, AvaTrade or ZuluTrade (*)
+Trading platforms more accessible than ever
+Stock market should be based on fundamental analysis, but research shows most movements are related to sentiment
+Social Media as a propeller of (fake) news proliferation
+Majority of people (76%) losing money when investing on their own on trading platforms such as eToro, AvaTrade or ZuluTrade (*)
 
 ## Target Users
-1. Retail investors
-2. Daily traders
-3. Equity Researchers
-4. Short-term Investors
-5. Trading Platform users (eToro, Robinhood…)
+- Retail investors
+- Daily traders
+- Equity Researchers
+- Short-term Investors
+- Trading Platform users (eToro, Robinhood…)
 
 ## Future Scopes
 1. Include Newspapers inputs (Financial Times, Bloomberg, Wall Street Journal…)
