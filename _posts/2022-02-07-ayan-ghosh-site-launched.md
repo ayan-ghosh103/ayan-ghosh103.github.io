@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Ayan Ghosh, Cognitive Automation Associate, Launches Site"
+title: "Launches Site"
 date: 2022-02-07
 ---
 
