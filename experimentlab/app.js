@@ -79,7 +79,7 @@ function renderAnalysis(){
   $("treatmentValue").textContent=c.metric==="binary"?pct(res.treatment):fmt(res.treatment);
   const boot=bootstrapDiff(controls,treats,c.reps);
   card("inference",[{l:"95% normal CI",v:c.metric==="binary"?fmt(res.lo*100)+" to "+fmt(res.hi*100)+" pp":fmt(res.lo)+" to "+fmt(res.hi),s:"normal approximation"},{l:"95% bootstrap CI",v:c.metric==="binary"?fmt(boot.lo*100)+" to "+fmt(boot.hi*100)+" pp":fmt(boot.lo)+" to "+fmt(boot.hi),s:c.reps+" resamples"},{l:"p-value",v:res.p.toFixed(4),s:"two-sided normal test"},{l:"Inference",v:res.p< c.alpha?"Evidence of non-zero effect":"Inconclusive at configured alpha",s:"not a ship/no-ship rule"}]);
-  cuped(c); segments(c); renderDecision(c,res,boot); powerMDE(); didModule(); staggeredModule(); syntheticModule(); tmleModule();
+  cuped(c); segments(c); renderDecision(c,res,boot); powerMDE(); didModule(); staggeredModule(); syntheticModule(); tmleModule(); renderSequentialMonitoring();
   $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows · "+metricLabel(c)+".";
 }
 
@@ -134,3 +134,62 @@ $("loadDemo").onclick=()=>load(demo(),"demo-experiment.csv");
 $("dropzone").addEventListener("dragover",e=>e.preventDefault());$("dropzone").addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f);}});
 $("downloadHTML").onclick=downloadHTML;$("printPDF").onclick=printPDF;$("runPower").onclick=powerMDE;
 load(demo(),"demo-experiment.csv");
+
+/* ExperimentLab scenario + sequential monitoring layer */
+const scenarioPresets = {
+  conversion:{label:"Conversion experiment",metric:"binary",column:"conversion",pre:"pre_metric",description:"Binary outcome such as conversion, activation or retention."},
+  gross_bookings:{label:"Gross Bookings experiment",metric:"continuous",column:"gross_bookings",pre:"pre_gross_bookings",description:"Average Gross Bookings per eligible user."},
+  revenue:{label:"Revenue experiment",metric:"revenue",column:"revenue",pre:"pre_revenue",description:"Average revenue per eligible user."},
+  ratio:{label:"Ratio metric",metric:"ratio",column:"numerator",denominator:"denominator",pre:"pre_ratio_numerator",description:"Ratio of aggregated numerator to denominator; do not treat row-level ratios as the primary estimand without a deliberate design."},
+  geo:{label:"Geo experiment",metric:"continuous",column:"gross_bookings",unit:"geo",description:"Geo-level treatment with clustered/aggregate inference considerations."},
+  staggered:{label:"Staggered rollout",metric:"continuous",column:"gross_bookings",time:"week",cohort:"treatment_week",description:"Different units receive treatment at different times."},
+  prepost:{label:"Pre/post intervention",metric:"continuous",column:"outcome",pre:"pre_outcome",description:"Intervention measured with a pre/post design, typically paired with a comparison group for DiD."}
+};
+
+function scenarioData(type){
+  const r=[], N=type==="geo"?48:2400;
+  for(let i=0;i<N;i++){
+    const t=type==="staggered"?((i%6)>=3?1:0):i%2, pre=80+Math.random()*30;
+    const conversion=Number(Math.random()<(.10+(t?.025:0)));
+    const gb=Math.max(0,(t?56:51)+pre*.35+(Math.random()-.5)*28);
+    const revenue=Math.max(0,(t?18:16)+pre*.12+(Math.random()-.5)*12);
+    const numerator=Math.max(0,(t?5.8:5.1)+Math.random()*2), denominator=80+Math.random()*40;
+    const week=i%12, cohort=type==="staggered"?(i%6<2?"4":i%6<4?"7":"10"):"";
+    const geo=type==="geo"?["IN-1","IN-2","IN-3","IN-4","IN-5","IN-6","IN-7","IN-8"][i%8]:"";
+    const post=type==="prepost"?(pre+(t?6:1)+(Math.random()-.5)*5):gb;
+    r.push({treatment:t,conversion,gross_bookings:gb,revenue, numerator,denominator, pre_metric:pre,pre_gross_bookings:pre,pre_revenue:pre,pre_ratio_numerator:pre,pre_outcome:pre,outcome:post,post_outcome:post,week, treatment_week:cohort,country:geo,geo});
+  }
+  return r;
+}
+
+function applyScenario(type){
+  const s=scenarioPresets[type]||scenarioPresets.conversion;
+  const metricEl=$("metric"), col=$("metricColumn"), pre=$("preColumn");
+  if(metricEl) metricEl.value=s.metric;
+  if(col) col.value=s.column;
+  if(pre) pre.value=s.pre||"";
+  if($("scenarioDescription")) $("scenarioDescription").textContent=s.description;
+  if($("scenarioTitle")) $("scenarioTitle").textContent=s.label;
+  load(scenarioData(type),s.label.toLowerCase().replace(/ /g,"-")+".csv");
+}
+
+function normalTail(z){return 1-normalCDF(z);}
+function sequentialLook(){
+  const mode=$("experimentState")?.value||"running", look=Number($("lookNumber")?.value||1), planned=Math.max(1,Number($("plannedLooks")?.value||5));
+  const info=Math.min(1,Math.max(.01,Number($("informationFraction")?.value||look/planned)));
+  const c=getConfig(); if(!lastResult)return;
+  if(mode==="concluded"){
+    return {mode,look,planned,info,alpha:c.alpha,boundary:c.alpha,zBoundary:normalInv(1-c.alpha/2),adjustedP:lastResult.res.p,decision:lastResult.res.p<c.alpha?"Crosses final alpha boundary":"Does not cross final alpha boundary"};
+  }
+  const z=Math.abs(lastResult.res.se?lastResult.res.diff/lastResult.res.se:0);
+  const zFinal=normalInv(1-c.alpha/2);
+  const zBoundary=zFinal/Math.sqrt(info);
+  const adjustedAlpha=2*normalTail(zBoundary);
+  return {mode,look,planned,info,alpha:c.alpha,boundary:adjustedAlpha,zBoundary,adjustedP:lastResult.res.p,decision:z>=zBoundary?"Boundary crossed — confirm stopping rule and pre-specified decision process":"Boundary not crossed — continue to planned look",nominalP:lastResult.res.p};
+}
+function renderSequentialMonitoring(){
+  const s=sequentialLook(); if(!s||!$("sequential"))return;
+  const label=s.mode==="running"?"RUNNING EXPERIMENT":"EXPERIMENT CONCLUDED";
+  const advice=s.mode==="running"?"Monitoring view: nominal p-values are shown for diagnostics, but the sequential boundary is the decision threshold. Do not repeatedly apply the final 0.05 threshold.":"Final analysis: use the pre-specified final alpha and planned analysis population.";
+  $("sequential").innerHTML='<div class="monitor-head"><strong>'+label+'</strong><span>Look '+s.look+' of '+s.planned+' · information fraction '+(s.info*100).toFixed(0)+'%</span></div><div class="cards"><div class="card"><small>Nominal p-value</small><strong>'+s.nominalP?.toFixed(4)+'</strong><span>diagnostic only while running</span></div><div class="card"><small>Sequential alpha</small><strong>'+s.boundary.toFixed(4)+'</strong><span>approx. O’Brien–Fleming-style boundary</span></div><div class="card"><small>Z boundary</small><strong>'+s.zBoundary.toFixed(2)+'</strong><span>two-sided</span></div><div class="card"><small>Monitoring status</small><strong>'+s.decision+'</strong><span>'+advice+'</span></div></div>';
+}
