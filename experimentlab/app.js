@@ -384,6 +384,8 @@ function metricPlanRow(role){
     const type=el.querySelector(".metric-type");
     if(type && col)type.value=inferMetricType(col);
     const direction=el.querySelector(".metric-direction");
+    const denWrap=el.querySelector(".metric-denominator-wrap");
+    if(denWrap)denWrap.style.display=(type?.value==="ratio")?"":"none";
     if(direction && col)direction.value=inferMetricDirection(col);
     const name=el.querySelector(".metric-name");
     if(name && !name.value && col)name.value=col.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
@@ -402,13 +404,17 @@ function initMetricPlan(){
     select.innerHTML=optionHtml(cols,current||c.metricColumn);
     select.value=current||c.metricColumn||"";
     row.querySelector(".primaryMetricType").value=c.metric;
+    row.querySelector(".primaryMetricDirection").value=inferMetricDirection(select.value);
     row.querySelector(".primaryMetricDenominator").innerHTML=optionHtml(metricColumnCandidates(),c.denominator).replace('<option value="">Select metric column…</option>','');
+    row.querySelector(".metric-denominator-wrap").style.display=c.metric==="ratio"?"":"none";
   };
   sync();
   ["metric","metricColumn","denominatorColumn"].forEach(id=>$(id)?.addEventListener("change",sync));
   row.querySelector(".primaryMetricColumn").addEventListener("change",e=>{
     const col=e.target.value;if(!col)return;
     const type=row.querySelector(".primaryMetricType");type.value=inferMetricType(col);
+    row.querySelector(".primaryMetricDirection").value=inferMetricDirection(col);
+    row.querySelector(".metric-denominator-wrap").style.display=type.value==="ratio"?"":"none";
     row.querySelector(".primaryMetricName").value=col.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
   });
   $("addPrimaryMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Primary")));
