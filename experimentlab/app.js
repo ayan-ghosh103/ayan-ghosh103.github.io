@@ -583,7 +583,11 @@ $("metric").addEventListener("change",()=>{renderAnalysis();});
 $("planningRows")?.addEventListener("change",e=>{
   const el=e.target, key=el.dataset.planKey, field=el.dataset.planField; if(!key||!field)return;
   planningState[key]=planningState[key]||{};
-  planningState[key][field]=field==="mdeType"?el.value:Number(el.value);
+  if(field==="mdeType") planningState[key][field]=el.value;
+  else if(field==="baseline"){
+    const def=readMetricPlan().find((_,i)=>planningKey(_,i)===key);
+    planningState[key][field]=def?.type==="binary" ? Number(el.value)/100 : Number(el.value);
+  } else planningState[key][field]=Number(el.value);
   renderPlanning();
 });
 
