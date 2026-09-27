@@ -150,7 +150,7 @@ function powerMDE(){
   else mde=(zA+zP)*sdv*ratio;
   const target=c.mde||mde;
   const effectText=c.metric==="binary"?pct(mde)+" absolute":"+"+fmt(mde)+" metric units";
-  card("power",[{"l":"Observed total N","v":n.toLocaleString(),"s":"current dataset"},{"l":"Target power","v":pct(c.power),"s":"two-sided test"},{"l":"Approx. MDE","v":effectText,"s:"+(c.metric==="binary"?"absolute difference":"continuous metric")},{"l":"Target MDE","v":c.metric==="binary"?pct(target):fmt(target),"s":"from configuration"}]);
+  card("power",[{"l":"Observed total N","v":n.toLocaleString(),"s":"current dataset"},{"l":"Target power","v":pct(c.power),"s":"two-sided test"},{"l":"Approx. MDE","v":effectText,"s":c.metric==="binary"?"absolute difference":"continuous metric"},{"l":"Target MDE","v":c.metric==="binary"?pct(target):fmt(target),"s":"from configuration"}]);
   $("powerNote").innerHTML=c.metric==="binary"?"Binary approximation uses the baseline conversion rate. For planning, verify with a dedicated power package when rates are extreme.":"Continuous approximation uses the baseline standard deviation and a normal-theory two-sample design.";
 }
 
