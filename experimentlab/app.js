@@ -22,7 +22,7 @@ function parseCSV(text){
   const lines=text.trim().split(/\r?\n/); if(!lines.length)return [];
   const parseLine=line=>{let out=[],cur="",q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q}else if(ch===','&&!q){out.push(cur.trim());cur="";}else cur+=ch;}out.push(cur.trim());return out;};
   const head=parseLine(lines.shift()).map(x=>x.replace(/^"|"$/g,""));
-  return lines.map(line=>{const v=parseLine(line);return Object.fromEntries(head.map((h,i)=>[h,v[i]??""]));}).filter(r=>r.treatment!==""&&r.treatment!==undefined);
+  return lines.map(line=>{const v=parseLine(line);return Object.fromEntries(head.map((h,i)=>[h,v[i]??""]));}).filter(r=>Object.values(r).some(v=>String(v).trim()!==""));
 }
 
 function inferDataset(rawRows){
