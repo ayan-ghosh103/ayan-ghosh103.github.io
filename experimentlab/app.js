@@ -195,10 +195,24 @@ function segments(c){
 }
 
 function renderDecision(c,res,boot){
-  const unit=c.metric==="binary"?"percentage points":(c.metricColumn||"metric units"), direction=res.diff>=0?"higher":"lower";
-  $("decision").innerHTML='<strong>Observed result:</strong> treatment is '+Math.abs(res.diff).toFixed(c.metric==="binary"?4:2)+' '+unit+' '+direction+' than control, a '+pct(res.lift,1)+' relative change. The bootstrap 95% interval is '+(c.metric==="binary"?fmt(boot.lo*100)+" to "+fmt(boot.hi*100)+" pp":fmt(boot.lo)+" to "+fmt(boot.hi))+'.<br><br><span class="muted">Decision note: combine this estimate with power, guardrails, experiment integrity, business value and pre-specified decision criteria. ExperimentLab does not automatically recommend shipping.</span>';
+  const metrics=readMetricPlan();
+  if(!metrics.length){
+    $("decision").innerHTML='<span class="muted">Configure at least one metric to generate the evidence summary.</span>';
+    return;
+  }
+  const rowsHtml=metrics.map((def,i)=>{
+    const r=metricResult(def);
+    if(!r)return '<div class="evidence-row"><strong>'+escapeHtml(def.role)+' · '+escapeHtml(def.name)+'</strong><span>Insufficient data</span></div>';
+    const favorable=def.direction==="down"?r.diff<0:r.diff>0;
+    const flat=Math.abs(r.diff)<1e-12;
+    const status=flat?"Flat":favorable?"Favorable":"Unfavorable";
+    const statusClass=flat?"neutral":favorable?"favorable":"unfavorable";
+    const effect=def.type==="binary"?fmt(r.diff*100,2)+" pp":fmt(r.diff,2);
+    const lift=pct(r.lift,1);
+    return '<div class="evidence-row"><div><strong>'+escapeHtml(def.role)+' · '+escapeHtml(def.name)+'</strong><small>'+escapeHtml(metricDirectionText(def))+'</small></div><div><b>'+escapeHtml(status)+'</b><small>'+effect+' · '+lift+' · p='+r.p.toFixed(4)+'</small></div></div>';
+  }).join("");
+  $("decision").innerHTML='<div class="evidence-summary"><div class="evidence-intro"><strong>Evidence summary</strong><span class="muted">Observed treatment movement is interpreted using each metric’s configured success direction.</span></div>'+rowsHtml+'</div><p class="muted">This is an evidence summary, not an automatic ship/no-ship recommendation. Consider uncertainty, guardrails, experiment integrity and pre-specified decision criteria together.</p>';
 }
-
 function didModule(){
   const pre=$("didPre").value.trim(), post=$("didPost").value.trim(); if(!pre||!post){$("didResult").textContent="Configure pre/post outcome columns to run DiD.";return;}
   const c=getConfig(), groups={cpre:[],cpost:[],tpre:[],tpost:[]};
