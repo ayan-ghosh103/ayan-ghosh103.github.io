@@ -59,3 +59,11 @@
 .readout-trend-title{font-weight:800}.readout-trend-sub{font-size:11px;color:#74808b;margin-bottom:6px}
 .readout-callout{padding:13px 15px;border-left:4px solid #86b93d;background:#f3f8eb;border-radius:7px}
 @media(max-width:760px){.readout-cards{grid-template-columns:1fr 1fr}.readout-comparison{grid-template-columns:1fr}.readout-table{min-width:720px}}
+
+.readout-trend svg{display:block;width:100%;min-width:700px;height:auto}
+.readout-trend .gridline{stroke:#e5e9ed}.readout-trend .line{fill:none;stroke-width:3}
+.readout-trend .line.control{stroke:#66727d}.readout-trend .line.treatment{stroke:#86b93d}
+.readout-trend .dot{fill:#fff;stroke-width:2}.readout-trend .dot.control{stroke:#66727d}.readout-trend .dot.treatment{stroke:#86b93d}
+.readout-trend text{fill:#74808b;font:11px system-ui,sans-serif}.readout-trend .legend{display:flex;gap:18px;font-size:11px;color:#66727e;margin-top:4px}
+.readout-trend .legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px}
+.readout-trend .legend-control{background:#66727d}.readout-trend .legend-treatment{background:#86b93d}
