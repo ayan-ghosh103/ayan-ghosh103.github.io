@@ -275,6 +275,9 @@ function inferMetricType(col){
   if(/revenue|gmv|gross.?bookings|booking|spend|amount|value/.test(String(col).toLowerCase())) return "revenue";
   return "continuous";
 }
+function inferMetricDirection(col){
+  return /cancel|refund|complaint|failure|error|latency|churn|unsubscribe|bounce|defect|cost|fraud|support.?contact/i.test(String(col)) ? "down" : "up";
+}
 function metricColumnCandidates(){
   if(!rows.length)return [];
   const keys=Object.keys(rows[0]);
@@ -316,6 +319,8 @@ function refreshMetricPlanOptions(){
     if(type&&select?.value)type.value=inferMetricType(select.value);
     const name=p.querySelector(".primaryMetricName");
     if(name&&(!name.value||name.value==="Primary metric")&&select?.value)name.value=select.value.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+    const dir=p.querySelector(".primaryMetricDirection");
+    if(dir&&select?.value)dir.value=inferMetricDirection(select.value);
   }
   document.querySelectorAll("#metricRows .metric-row:not(.primary-metric-row)").forEach(el=>syncMetricRowOptions(el,cols));
   // Auto-add obvious metrics once after upload so the readout is immediately useful.
@@ -348,7 +353,7 @@ function readMetricPlan(){
     if(!column)return;
     const type=el.querySelector(".metric-type,.primaryMetricType")?.value||inferMetricType(column);
     const denominator=el.querySelector(".metric-denominator,.primaryMetricDenominator")?.value.trim()||"denominator";
-    const direction=el.querySelector(".metric-direction,.primaryMetricDirection")?.value||"up";
+    const direction=el.querySelector(".metric-direction,.primaryMetricDirection")?.value||inferMetricDirection(column);
     out.push({role,name,type,column,denominator,direction,primary:role==="Primary"});
   });
   if(!out.some(x=>x.primary)){
@@ -378,6 +383,8 @@ function metricPlanRow(role){
     const col=e.target.value;
     const type=el.querySelector(".metric-type");
     if(type && col)type.value=inferMetricType(col);
+    const direction=el.querySelector(".metric-direction");
+    if(direction && col)direction.value=inferMetricDirection(col);
     const name=el.querySelector(".metric-name");
     if(name && !name.value && col)name.value=col.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
   });
