@@ -4,8 +4,7 @@ permalink: /work/jpmorgan-cost-to-serve/
 title: J.P. Morgan Cost-to-Serve — Decision Science
 ---
 <section class="case-page">
-  <a class="button primary back-home" href="/">← Back to home</a>
-  <div class="eyebrow">J.P. MORGAN · DECISION SCIENCE · PREDICTIVE ANALYTICS · OPERATIONS</div>
+  <div class="case-header"><div class="eyebrow">J.P. MORGAN · DECISION SCIENCE · PREDICTIVE ANALYTICS · OPERATIONS</div><a class="button primary back-home" href="/">← Back to home</a></div>
   <h1>Cost-to-Serve</h1>
   <p class="case-lead">Combining predictive analytics, process analysis and business trade-offs to reduce customer servicing costs.</p>
 
