@@ -163,26 +163,34 @@ const scenarioPresets = {
 };
 
 function scenarioData(type){
-  const r=[], N=type==="geo"?48:2400;
-  for(let i=0;i<N;i++){
-    const t=type==="staggered"?((i%6)>=3?1:0):i%2, pre=80+Math.random()*30;
+  const r=[];
+  if(type==="geo"){
+    const geos=["IN-1","IN-2","IN-3","IN-4","IN-5","IN-6","IN-7","IN-8"];
+    for(let g=0;g<geos.length;g++) for(let w=1;w<=8;w++){
+      const t=g<4?1:0, pre=45+Math.random()*10, gb=Math.max(0,(t?58:52)+pre*.2+(Math.random()-.5)*10);
+      r.push({treatment:t,conversion:Number(Math.random()<(.1+(t?.02:0))),gross_bookings:gb,revenue:gb*.32+Math.random()*4,numerator:gb*.12,denominator:100+Math.random()*20,pre_metric:pre,pre_gross_bookings:pre,pre_revenue:pre,week:w,country:geos[g],geo:geos[g]});
+    }
+    return r;
+  }
+  for(let i=0;i<2400;i++){
+    const week=i%12, cohort=type==="staggered"?(i%3===0?"4":i%3===1?"7":"10"):"";
+    const t=type==="staggered"?week>=Number(cohort||99):i%2, pre=80+Math.random()*30;
     const conversion=Number(Math.random()<(.10+(t?.025:0)));
     const gb=Math.max(0,(t?56:51)+pre*.35+(Math.random()-.5)*28);
     const revenue=Math.max(0,(t?18:16)+pre*.12+(Math.random()-.5)*12);
     const numerator=Math.max(0,(t?5.8:5.1)+Math.random()*2), denominator=80+Math.random()*40;
-    const week=i%12, cohort=type==="staggered"?(i%6<2?"4":i%6<4?"7":"10"):"";
-    const geo=type==="geo"?["IN-1","IN-2","IN-3","IN-4","IN-5","IN-6","IN-7","IN-8"][i%8]:"";
     const post=type==="prepost"?(pre+(t?6:1)+(Math.random()-.5)*5):gb;
-    r.push({treatment:t,conversion,gross_bookings:gb,revenue, numerator,denominator, pre_metric:pre,pre_gross_bookings:pre,pre_revenue:pre,pre_ratio_numerator:pre,pre_outcome:pre,outcome:post,post_outcome:post,week, treatment_week:cohort,country:geo,geo});
+    r.push({treatment:t?1:0,conversion,gross_bookings:gb,revenue,numerator,denominator,pre_metric:pre,pre_gross_bookings:pre,pre_revenue:pre,pre_ratio_numerator:pre,outcome:post,post_outcome:post,week,treatment_week:cohort,country:["UK","US","DE","IN"][i%4]});
   }
   return r;
 }
 
 function applyScenario(type){
   const s=scenarioPresets[type]||scenarioPresets.conversion;
-  const metricEl=$("metric"), col=$("metricColumn"), pre=$("preColumn");
+  const metricEl=$("metric"), col=$("metricColumn"), den=$("denominatorColumn"), pre=$("preColumn");
   if(metricEl) metricEl.value=s.metric;
   if(col) col.value=s.column;
+  if(den) den.value=s.denominator||"denominator";
   if(pre) pre.value=s.pre||"";
   if($("scenarioDescription")) $("scenarioDescription").textContent=s.description;
   if($("scenarioTitle")) $("scenarioTitle").textContent=s.label;
