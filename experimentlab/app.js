@@ -1,1 +1,136 @@
-const $=id=>document.getElementById(id);let rows=[];function demo(){const r=[];for(let i=0;i<1200;i++){const t=i%2,base=Math.random()<.84?1:0,effect=t&&Math.random()<.08?1:0,conv=base||effect?1:0;r.push({treatment:t,conversion:conv,pre_metric:Math.max(0,Math.round(100+Math.random()*35)),country:["UK","US","DE","IN"][i%4]})}return r}function parseCSV(text){const lines=text.trim().split(/\\r?\\n/),head=lines.shift().split(",").map(x=>x.trim());return lines.map(line=>{const v=line.split(",");return Object.fromEntries(head.map((h,i)=>[h,v[i]?.trim()??""]))}).filter(r=>r.treatment!==""&&r.conversion!=="")}function num(x){return Number(x)||0}function mean(a){return a.reduce((x,y)=>x+y,0)/(a.length||1)}function erf(x){const s=x<0?-1:1;x=Math.abs(x);const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911,t=1/(1+p*x);return s*(1-(((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-x*x)))}function normalCDF(x){return .5*(1+erf(x/Math.SQRT2))}function card(id,items){$(id).innerHTML=items.map(x=>'<div class="card"><small>'+x.l+'</small><strong>'+x.v+'</strong><span>'+x.s+'</span></div>').join('')}function analysis(){const c=rows.filter(r=>num(r.treatment)===0),t=rows.filter(r=>num(r.treatment)===1),cr=mean(c.map(r=>num(r.conversion))),tr=mean(t.map(r=>num(r.conversion))),diff=tr-cr,lift=cr?diff/cr:0,se=Math.sqrt(cr*(1-cr)/c.length+tr*(1-tr)/t.length),z=se?diff/se:0,p=2*(1-normalCDF(Math.abs(z))),ci=1.96*se,expected=(c.length+t.length)/2,imbalance=Math.abs(t.length-expected)/expected;card('health',[{l:'Control N',v:c.length,s:'users'},{l:'Treatment N',v:t.length,s:'users'},{l:'Allocation',v:(t.length/(c.length+t.length)*100).toFixed(1)+'%',s:'treatment share'},{l:'SRM',v:imbalance>.1?'Review':'Pass',s:imbalance>.1?'allocation differs materially':'50/50 allocation looks healthy'}]);card('effect',[{l:'Control conversion',v:(cr*100).toFixed(2)+'%',s:'baseline'},{l:'Treatment conversion',v:(tr*100).toFixed(2)+'%',s:'observed'},{l:'Relative lift',v:(lift*100).toFixed(1)+'%',s:'treatment vs control'},{l:'95% CI',v:((diff-ci)*100).toFixed(2)+'% to '+((diff+ci)*100).toFixed(2)+'%',s:'absolute effect'}]);$('controlBar').style.width=Math.min(100,cr*100)+'%';$('treatmentBar').style.width=Math.min(100,tr*100)+'%';$('controlValue').textContent=(cr*100).toFixed(2)+'%';$('treatmentValue').textContent=(tr*100).toFixed(2)+'%';cuped(c,t);segments();const direction=diff>0?'higher':'lower',evidence=p<.05?'statistically distinguishable from zero at the 5% level':'not statistically distinguishable from zero at the 5% level';$('decision').innerHTML='<strong>Observed result:</strong> treatment conversion is '+Math.abs(lift*100).toFixed(1)+'% '+direction+' than control. The estimated absolute effect is '+(diff*100).toFixed(2)+' percentage points ('+((diff-ci)*100).toFixed(2)+' to '+((diff+ci)*100).toFixed(2)+'). The primary test is '+evidence+' (p='+p.toFixed(4)+').<br><br><span class="muted">Decision note: interpret the estimate alongside experiment power, guardrails and product context; this tool does not automatically recommend shipping.</span>'}function cuped(c,t){if(!('pre_metric'in rows[0])){$('cuped').innerHTML='<div class="card"><strong>Unavailable</strong><span>Add a pre_metric column to enable adjustment.</span></div>';return}const all=[...c,...t],x=all.map(r=>num(r.pre_metric)),y=all.map(r=>num(r.conversion)),mx=mean(x),my=mean(y),cov=mean(all.map((r,i)=>(x[i]-mx)*(y[i]-my))),vx=mean(x.map(v=>(v-mx)**2)),theta=vx?cov/vx:0,adj=all.map((r,i)=>y[i]-theta*(x[i]-mx)),ac=mean(adj.filter((_,i)=>num(all[i].treatment)===0)),at=mean(adj.filter((_,i)=>num(all[i].treatment)===1));card('cuped',[{l:'Raw effect',v:((mean(t.map(r=>num(r.conversion)))-mean(c.map(r=>num(r.conversion))))*100).toFixed(2)+' pp',s:'before adjustment'},{l:'Adjusted effect',v:((at-ac)*100).toFixed(2)+' pp',s:'CUPED-style estimate'},{l:'Adjustment',v:(((at-ac)-(mean(t.map(r=>num(r.conversion)))-mean(c.map(r=>num(r.conversion)))))*100).toFixed(2)+' pp',s:'change in estimate'}])}function segments(){if(!('country'in rows[0])){$('segments').innerHTML='<tr><td colspan="5">Add a country column to explore segments.</td></tr>';return}const groups=[...new Set(rows.map(r=>r.country))];$('segments').innerHTML=groups.map(g=>{const a=rows.filter(r=>r.country===g),c=a.filter(r=>num(r.treatment)===0),t=a.filter(r=>num(r.treatment)===1),cr=mean(c.map(r=>num(r.conversion))),tr=mean(t.map(r=>num(r.conversion)));return '<tr><td>'+g+'</td><td>'+(cr*100).toFixed(2)+'%</td><td>'+(tr*100).toFixed(2)+'%</td><td>'+(cr?((tr-cr)/cr*100).toFixed(1):'—')+'%</td><td>'+a.length+'</td></tr>'}).join('')}function load(data,name){rows=data;$('status').textContent='Loaded '+rows.length.toLocaleString()+' rows'+(name?' · '+name:'')+'.';analysis()}$('file').addEventListener('change',e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f)}});$('loadDemo').onclick=()=>load(demo(),'demo-experiment.csv');$('dropzone').addEventListener('dragover',e=>e.preventDefault());$('dropzone').addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f)}});load(demo(),'demo-experiment.csv');
+const $ = id => document.getElementById(id);
+let rows = [];
+let lastResult = null;
+
+const fmt = (x, d=2) => Number.isFinite(x) ? x.toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d}) : "—";
+const pct = (x,d=2) => Number.isFinite(x) ? (x*100).toFixed(d)+"%" : "—";
+const num = x => { const n=Number(x); return Number.isFinite(n)?n:NaN; };
+const mean = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : NaN;
+const variance = a => { const m=mean(a); return a.length>1 ? a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1) : NaN; };
+const sd = a => Math.sqrt(variance(a));
+
+function erf(x){const s=x<0?-1:1;x=Math.abs(x);const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911,t=1/(1+p*x);return s*(1-(((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-x*x)));}
+function normalCDF(x){return .5*(1+erf(x/Math.SQRT2));}
+function normalInv(p){let a=[-39.6968302866538,220.946098424521,-275.928510446969,138.357751867269,-30.6647980661472,2.50662827745924],b=[-54.4760987982241,161.585836858041,-155.698979859887,66.8013118877197,-13.2806815528857],c=[-.00778489400243029,-.322396458041136,-2.40075827716184,-2.54973253934373,4.37466414146497,2.93816398269878],d=[.00778469570904146,.32246712907004,2.445134137143,3.75440866190742],q=p-.5;
+if(p<=0)return-Infinity;if(p>=1)return Infinity;if(Math.abs(q)<.425){let r=.180625-q*q;return q*((((a[5]*r+a[4])*r+a[3])*r+a[2])*r+a[1])*r+a[0])/(((((b[5]*r+b[4])*r+b[3])*r+b[2])*r+b[1])*r+1);}
+let r=q<0?p:1-p;r=Math.sqrt(-Math.log(r));return (q<0?-1:1)*(((((c[5]*r+c[4])*r+c[3])*r+c[2])*r+c[1])*r+c[0])/((((d[3]*r+d[2])*r+d[1])*r+d[0])*r+1));}
+
+function card(id,items){$(id).innerHTML=items.map(x=>'<div class="card"><small>'+x.l+'</small><strong>'+x.v+'</strong><span>'+x.s+'</span></div>').join('');}
+function escapeHtml(s){return String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
+
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/); if(!lines.length)return [];
+  const parseLine=line=>{let out=[],cur="",q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q}else if(ch===','&&!q){out.push(cur.trim());cur="";}else cur+=ch;}out.push(cur.trim());return out;};
+  const head=parseLine(lines.shift()).map(x=>x.replace(/^"|"$/g,""));
+  return lines.map(line=>{const v=parseLine(line);return Object.fromEntries(head.map((h,i)=>[h,v[i]??""]));}).filter(r=>r.treatment!==""&&r.treatment!==undefined);
+}
+
+function demo(){
+  const r=[]; for(let i=0;i<1600;i++){const t=i%2, pre=80+Math.random()*40, conv=(Math.random()<(.12+(t?.035:0))?1:0), gb=Math.max(0,(t?52:47)+pre*.45+(Math.random()-.5)*35);r.push({treatment:t,conversion:conv,gross_bookings:gb,pre_metric:pre,country:["UK","US","DE","IN"][i%4]});} return r;
+}
+function getConfig(){
+  return {metric:$("metric").value, metricColumn:$("metricColumn").value.trim()||($("metric").value==="binary"?"conversion":"gross_bookings"), pre:$("preColumn").value.trim(), expected:Number($("allocation").value)/100, alpha:Number($("alpha").value), power:Number($("power").value), mde:Number($("mde").value)/100, reps:Number($("bootstrap").value)};
+}
+function metricLabel(c){return c.metric==="binary"?"Conversion rate":c.metric==="continuous"?"Average "+(c.metricColumn||"metric"):"Average "+(c.metricColumn||"revenue");}
+function validate(){
+  const c=getConfig(); if(!rows.length)return "Load data first.";
+  if(!rows.every(r=>[0,1].includes(Number(r.treatment))))return "treatment must be coded 0/1.";
+  const vals=rows.map(r=>num(r[c.metricColumn])); if(vals.some(Number.isNaN))return "Metric column contains missing or non-numeric values.";
+  if(c.metric==="binary" && vals.some(v=>![0,1].includes(v)))return "Binary metrics must contain only 0/1.";
+  if(c.pre && rows.some(r=>Number.isNaN(num(r[c.pre]))))return "Pre-period metric contains missing or non-numeric values.";
+  return "";
+}
+
+function bootstrapDiff(c,t,reps){
+  const out=[]; for(let b=0;b<reps;b++){let cm=0,tm=0;for(let i=0;i<c.length;i++)cm+=c[Math.floor(Math.random()*c.length)];for(let i=0;i<t.length;i++)tm+=t[Math.floor(Math.random()*t.length)];out.push(tm/t.length-cm/c.length);} out.sort((a,b)=>a-b);return {lo:out[Math.floor(reps*.025)],hi:out[Math.floor(reps*.975)],se:sd(out)};
+}
+function continuousTest(c,t){
+  const cm=mean(c),tm=mean(t),diff=tm-cm, se=Math.sqrt(variance(c)/c.length+variance(t)/t.length), z=se?diff/se:0, p=2*(1-normalCDF(Math.abs(z))), ci=1.96*se;
+  return {control:cm,treatment:tm,diff,lift:cm?diff/cm:NaN,se,p,lo:diff-ci,hi:diff+ci};
+}
+function binaryTest(c,t){
+  const cm=mean(c),tm=mean(t),diff=tm-cm,se=Math.sqrt(cm*(1-cm)/c.length+tm*(1-tm)/t.length),z=se?diff/se:0,p=2*(1-normalCDF(Math.abs(z))),ci=1.96*se;
+  return {control:cm,treatment:tm,diff,lift:cm?diff/cm:NaN,se,p,lo:diff-ci,hi:diff+ci};
+}
+
+function powerMDE(){
+  const c=getConfig(), n=rows.length, alloc=c.expected, nc=Math.max(1,Math.round(n*(1-alloc))),nt=Math.max(1,n-nc), alpha=c.alpha, zA=normalInv(1-alpha/2),zP=normalInv(c.power);
+  const baseline=Number($("baseline").value)/100, sdv=Number($("baselineSd").value), ratio=Math.sqrt(1/nc+1/nt);
+  let mde;
+  if(c.metric==="binary"){const v=baseline*(1-baseline);mde=(zA*Math.sqrt(v*ratio*ratio)+zP*Math.sqrt(v*ratio*ratio));}
+  else mde=(zA+zP)*sdv*ratio;
+  const target=c.mde||mde;
+  const effectText=c.metric==="binary"?pct(mde)+" absolute":"+"+fmt(mde)+" metric units";
+  card("power",[{"l":"Observed total N","v":n.toLocaleString(),"s":"current dataset"},{"l":"Target power","v":pct(c.power),"s":"two-sided test"},{"l":"Approx. MDE","v":effectText,"s:"+(c.metric==="binary"?"absolute difference":"continuous metric")},{"l":"Target MDE","v":c.metric==="binary"?pct(target):fmt(target),"s":"from configuration"}]);
+  $("powerNote").innerHTML=c.metric==="binary"?"Binary approximation uses the baseline conversion rate. For planning, verify with a dedicated power package when rates are extreme.":"Continuous approximation uses the baseline standard deviation and a normal-theory two-sample design.";
+}
+
+function renderAnalysis(){
+  const err=validate(); if(err){$("status").textContent=err;return;}
+  const c=getConfig(), controls=rows.filter(r=>Number(r.treatment)===0).map(r=>num(r[c.metricColumn])), treats=rows.filter(r=>Number(r.treatment)===1).map(r=>num(r[c.metricColumn]));
+  const res=c.metric==="binary"?binaryTest(controls,treats):continuousTest(controls,treats); lastResult={config:c,res,controls,treats};
+  const expected=rows.length*c.expected, imbalance=Math.abs(treats.length-expected)/expected;
+  card("health",[{l:"Control N",v:controls.length.toLocaleString(),s:"users/units"},{l:"Treatment N",v:treats.length.toLocaleString(),s:"users/units"},{l:"Allocation",v:pct(treats.length/rows.length,1),s:"treatment share"},{l:"SRM",v:imbalance>.1?"Review":"Pass",s:imbalance>.1?"allocation differs from expected":"allocation within 10% of expected"}]);
+  const unit=c.metric==="binary"?"rate":(c.metricColumn||"metric");
+  card("effect",[{l:"Control",v:c.metric==="binary"?pct(res.control):fmt(res.control),s:unit+" baseline"},{l:"Treatment",v:c.metric==="binary"?pct(res.treatment):fmt(res.treatment),s:unit+" observed"},{l:"Absolute effect",v:c.metric==="binary"?fmt(res.diff*100)+" pp":fmt(res.diff),s:"treatment − control"},{l:"Relative lift",v:pct(res.lift,1),s:"relative to control"}]);
+  $("controlBar").style.width=(c.metric==="binary"?Math.max(0,res.control*100):Math.max(0,Math.min(100,res.control/(Math.max(res.control,res.treatment)||1)*100)))+"%";
+  $("treatmentBar").style.width=(c.metric==="binary"?Math.max(0,res.treatment*100):Math.max(0,Math.min(100,res.treatment/(Math.max(res.control,res.treatment)||1)*100)))+"%";
+  $("controlValue").textContent=c.metric==="binary"?pct(res.control):fmt(res.control);
+  $("treatmentValue").textContent=c.metric==="binary"?pct(res.treatment):fmt(res.treatment);
+  const boot=bootstrapDiff(controls,treats,c.reps);
+  card("inference",[{l:"95% normal CI",v:c.metric==="binary"?fmt(res.lo*100)+" to "+fmt(res.hi*100)+" pp":fmt(res.lo)+" to "+fmt(res.hi),s:"normal approximation"},{l:"95% bootstrap CI",v:c.metric==="binary"?fmt(boot.lo*100)+" to "+fmt(boot.hi*100)+" pp":fmt(boot.lo)+" to "+fmt(boot.hi),s:c.reps+" resamples"},{l:"p-value",v:res.p.toFixed(4),s:"two-sided normal test"},{l:"Inference",v:res.p< c.alpha?"Evidence of non-zero effect":"Inconclusive at configured alpha",s:"not a ship/no-ship rule"}]);
+  cuped(c); segments(c); renderDecision(c,res,boot); powerMDE(); didModule(); staggeredModule(); syntheticModule(); tmleModule();
+  $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows · "+metricLabel(c)+".";
+}
+
+function cuped(c){
+  if(!c.pre){$("cuped").innerHTML='<div class="card"><strong>Not configured</strong><span>Add a pre-period metric to estimate a CUPED-style adjusted effect.</span></div>';return;}
+  const all=rows, x=all.map(r=>num(r[c.pre])), y=all.map(r=>num(r[c.metricColumn])), mx=mean(x),my=mean(y),vx=mean(x.map(v=>(v-mx)**2)),cov=mean(x.map((v,i)=>(v-mx)*(y[i]-my))),theta=vx?cov/vx:0, adj=y.map((v,i)=>v-theta*(x[i]-mx)), ac=mean(adj.filter((_,i)=>Number(all[i].treatment)===0)),at=mean(adj.filter((_,i)=>Number(all[i].treatment)===1));
+  card("cuped",[{l:"Raw effect",v:c.metric==="binary"?fmt((mean(rows.filter(r=>!Number(r.treatment)).map(r=>num(r[c.metricColumn])))-0+mean(rows.filter(r=>Number(r.treatment)).map(r=>num(r[c.metricColumn]))))*0):"Computed below",s:"raw comparison retained above"},{l:"Adjusted effect",v:c.metric==="binary"?fmt((at-ac)*100)+" pp":fmt(at-ac),s:"CUPED-style estimate"},{l:"Theta",v:fmt(theta,3),s:"pre-period adjustment coefficient"}]);
+}
+
+function segments(c){
+  const key="country"; if(!rows.some(r=>r[key])){$("segments").innerHTML='<tr><td colspan="6">Add a country column to explore segments.</td></tr>';return;}
+  const groups=[...new Set(rows.map(r=>r[key]))];$("segments").innerHTML=groups.map(g=>{const a=rows.filter(r=>r[key]===g),cc=a.filter(r=>!Number(r.treatment)).map(r=>num(r[c.metricColumn])),tt=a.filter(r=>Number(r.treatment)).map(r=>num(r[c.metricColumn])),cm=mean(cc),tm=mean(tt),d=tm-cm;return '<tr><td>'+escapeHtml(g)+'</td><td>'+ (c.metric==="binary"?pct(cm):fmt(cm))+'</td><td>'+ (c.metric==="binary"?pct(tm):fmt(tm))+'</td><td>'+ (cm?pct(d/cm,1):"—")+'</td><td>'+fmt(d)+'</td><td>'+a.length+'</td></tr>';}).join("");
+}
+
+function renderDecision(c,res,boot){
+  const unit=c.metric==="binary"?"percentage points":(c.metricColumn||"metric units"), direction=res.diff>=0?"higher":"lower";
+  $("decision").innerHTML='<strong>Observed result:</strong> treatment is '+Math.abs(res.diff).toFixed(c.metric==="binary"?4:2)+' '+unit+' '+direction+' than control, a '+pct(res.lift,1)+' relative change. The bootstrap 95% interval is '+(c.metric==="binary"?fmt(boot.lo*100)+" to "+fmt(boot.hi*100)+" pp":fmt(boot.lo)+" to "+fmt(boot.hi))+'.<br><br><span class="muted">Decision note: combine this estimate with power, guardrails, experiment integrity, business value and pre-specified decision criteria. ExperimentLab does not automatically recommend shipping.</span>';
+}
+
+function didModule(){
+  const pre=$("didPre").value.trim(), post=$("didPost").value.trim(); if(!pre||!post){$("didResult").textContent="Configure pre/post outcome columns to run DiD.";return;}
+  const c=getConfig(), groups={cpre:[],cpost:[],tpre:[],tpost:[]};
+  rows.forEach(r=>{const t=Number(r.treatment);const preV=num(r[pre]),postV=num(r[post]);if(Number.isNaN(preV)||Number.isNaN(postV))return;if(t){groups.tpre.push(preV);groups.tpost.push(postV)}else{groups.cpre.push(preV);groups.cpost.push(postV)}});
+  const did=(mean(groups.tpost)-mean(groups.tpre))-(mean(groups.cpost)-mean(groups.cpre));
+  $("didResult").innerHTML='<strong>DiD estimate:</strong> '+fmt(did)+' '+(c.metric==="binary"?"absolute outcome units":"metric units")+'.<br><span class="muted">Formula: (Treatment post − Treatment pre) − (Control post − Control pre). This simple module assumes parallel trends and a clean treatment timing structure.</span>';
+}
+function staggeredModule(){
+  const time=$("timeColumn").value.trim(); if(!time){$("staggeredResult").textContent="Provide a time column plus first-treatment period to use the staggered design explorer.";return;}
+  const cohort=$("cohortColumn").value.trim(); if(!cohort){$("staggeredResult").textContent="Provide a first-treatment cohort column.";return;}
+  const cohorts=[...new Set(rows.map(r=>r[cohort]).filter(x=>x!==""&&x!=="control"))];$("staggeredResult").innerHTML='<strong>Design check:</strong> detected '+cohorts.length+' treatment cohorts. Use cohort/event-time plots and cohort-specific effects rather than a single naive two-way fixed-effects estimate when treatment timing varies.<br><span class="muted">ExperimentLab currently provides a design diagnostic here; cohort-specific estimators are the next inference layer.</span>';
+}
+function syntheticModule(){
+  const unit=$("unitColumn").value.trim(), time=$("timeColumn").value.trim(); if(!unit||!time){$("syntheticResult").textContent="Provide unit and time columns to configure a synthetic-control analysis.";return;}
+  $("syntheticResult").innerHTML='<strong>Configured:</strong> '+escapeHtml(unit)+' as unit and '+escapeHtml(time)+' as time. Synthetic control requires a treated unit, donor pool, pre-treatment period and an outcome column. The next step is donor-weight optimisation and pre-period fit diagnostics.';
+}
+function tmleModule(){
+  const treatment=$("tmleTreatment").value.trim(), outcome=$("tmleOutcome").value.trim(), covars=$("tmleCovariates").value.trim(); if(!treatment||!outcome||!covars){$("tmleResult").textContent="Configure treatment, binary outcome and covariates for the TMLE setup.";return;}
+  $("tmleResult").innerHTML='<strong>TMLE setup:</strong> treatment='+escapeHtml(treatment)+', outcome='+escapeHtml(outcome)+', covariates='+escapeHtml(covars)+'.<br><span class="muted">The browser MVP documents the estimand and required nuisance models; production TMLE should use cross-fitting, positivity checks and influence-curve based uncertainty.</span>';
+}
+
+function downloadHTML(){
+  const c=getConfig(); const title="ExperimentLab Report — "+new Date().toLocaleString();
+  const body=document.querySelector("main").innerHTML; const html='<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>body{font:14px Arial;max-width:1000px;margin:40px auto;line-height:1.5;color:#17202a}h1,h2{margin-top:28px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;text-align:left}.card{display:inline-block;vertical-align:top;width:22%;padding:12px;border:1px solid #ddd;margin:4px}.card small,.muted{color:#667}</style></head><body><h1>'+title+'</h1><p><b>Metric:</b> '+escapeHtml(metricLabel(c))+' · <b>N:</b> '+rows.length+'</p>'+body+'</body></html>';const blob=new Blob([html],{type:"text/html"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="experimentlab-report.html";a.click();URL.revokeObjectURL(url);
+}
+function printPDF(){window.print();}
+
+function load(data,name){rows=data; $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows"+(name?" · "+name:"")+"."; renderAnalysis();}
+$("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";$("baseline").value=b?"10":"50";$("baselineSd").disabled=b;$("baselineSd").value=b?"":"20";renderAnalysis();});
+["metricColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
+$("file").addEventListener("change",e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f);}});
+$("loadDemo").onclick=()=>load(demo(),"demo-experiment.csv");
+$("dropzone").addEventListener("dragover",e=>e.preventDefault());$("dropzone").addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f);}});
+$("downloadHTML").onclick=downloadHTML;$("printPDF").onclick=printPDF;$("runPower").onclick=powerMDE;
+load(demo(),"demo-experiment.csv");
