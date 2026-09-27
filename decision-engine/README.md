@@ -1,57 +1,91 @@
-# Decision Engine
+# Intervention Decision Studio
 
-A browser-based proof-of-work exploring the path from an ML prediction to an economically constrained intervention policy.
+A browser-based decision-support proof-of-work that starts with a messy business brief and ends with an explicit intervention policy.
 
-## Why I built it
+## The interaction
 
-A common failure mode in applied ML is to stop at predictive performance. A strong propensity model can rank customers who are likely to convert, but that does not establish that an intervention caused the conversion or that spending the intervention budget on those customers creates value.
+You can paste a paragraph such as:
 
-This project deliberately separates three layers:
+> I have 100,000 customers. We want to send a $4 retention offer to customers likely to churn. A saved customer is worth $60, we have a $150,000 budget and can contact at most 30% of customers.
 
-1. **Prediction** — estimate outcome propensity.
-2. **Incrementality** — estimate the conditional treatment effect.
-3. **Decisioning** — combine treatment effect with unit economics and operational constraints.
+The intake layer extracts the decision variables it can identify:
 
-The result is a policy simulator rather than another model dashboard.
+- population
+- intervention cost
+- value of an incremental outcome
+- budget
+- operational capacity
+- scenario / objective
+
+Anything missing is surfaced as a question or highlighted field. The user can then provide it in the controls and recalculate.
+
+This is intentionally **not** an LLM pretending to know missing business facts. The natural-language layer translates stated information into a structured decision problem; the policy engine makes the economics explicit.
+
+## Real-world scenarios
+
+The demo includes:
+
+- retention offers
+- voucher / incentive targeting
+- support automation
+
+The same decision layer can be adapted to other interventions where the business has a measurable incremental outcome, an intervention cost and constraints.
 
 ## Decision formulation
 
-For customer i, let:
+For customer $i$:
 
-- p_i = predicted probability of the outcome
-- τ_i = estimated incremental effect of the intervention
-- V = value of one incremental outcome
-- C = intervention cost
+**Expected Net Value = τ_i × V − C**
 
-The simplified expected net value is:
+where:
 
-**ENVi = τ_i × V − C**
+- $τ_i$ = estimated incremental treatment effect
+- $V$ = value of one incremental outcome
+- $C$ = intervention cost
 
-The policy ranks customers by expected net value and applies a capacity constraint. This makes the final intervention rule explicit.
+The engine then applies budget and operational capacity constraints.
 
-## What the simulator demonstrates
+## What the interface demonstrates
 
-- Propensity and incremental effect can disagree.
-- A high-propensity customer is not automatically a high-value treatment target.
-- Model quality changes the ordering of customers and therefore the economics of the policy.
-- Unit economics can change the optimal targeting threshold even when the predictive model is unchanged.
-- Capacity constraints turn a continuous scoring problem into a ranking / allocation problem.
-- Business value should be evaluated on incremental outcomes, not gross conversions attributed to treated customers.
+1. **Natural-language intake** — turn a business note into explicit assumptions.
+2. **Missing-value handling** — ask for required information rather than silently invent it.
+3. **Scenario controls** — change costs, value, budget, capacity and model quality.
+4. **Customer-level policy explorer** — inspect likelihood, incremental effect and expected economics.
+5. **Policy comparison** — target everyone, propensity, uplift and economic policy.
+6. **Sensitivity analysis** — see how intervention cost changes the economics.
+7. **Decision output** — show targeted population, incremental outcomes, value, spend, net value and ROI.
 
-## Controls
+## Synthetic data
 
-The simulator exposes population size, intervention cost, value per incremental conversion, targeting threshold, model precision and operational capacity.
+The browser demo uses deterministic synthetic customers. Propensity and treatment effect are heterogeneous and deliberately imperfectly correlated. This lets the interface demonstrate why:
 
-The comparison table evaluates several targeting thresholds under the same economic assumptions.
+**high likelihood ≠ high incremental value ≠ best business decision**
 
-## Technical notes
+The numbers are not estimates for a real company or customer population.
 
-The browser app uses a deterministic synthetic population with heterogeneous baseline propensity and treatment effect. The propensity score is intentionally noisy; the precision control changes ranking noise. Treatment effect is heterogeneous by construction so that propensity and uplift are not perfectly correlated.
+## Production path
 
-This is deliberately a simulation rather than a claim about a real customer population. In a production system, τ(X) would need to come from an appropriate causal/uplift design, with treatment assignment, overlap/positivity, outcome definitions, uncertainty and policy evaluation specified before deployment.
+A production implementation can replace the synthetic layer with:
 
-## Production extension
+- an existing propensity/risk score
+- validated CATE/uplift estimates
+- customer economics
+- policy guardrails
+- treatment capacity and budget
+- historical treatment/outcome data for policy evaluation
 
-A production implementation could ingest historical treatment/outcome data, estimate CATE/uplift with cross-fitting or a validated uplift learner, evaluate policy value with inverse-propensity weighting or doubly robust estimators, add customer-risk guardrails, and optimise under a real intervention budget.
+For causal estimation, the appropriate design would depend on treatment assignment, overlap, outcome definition, interference/SUTVA considerations and available labels. Policy value can then be evaluated using appropriate experimental, inverse-propensity or doubly robust methods.
 
-The important architectural boundary is that the ML model produces evidence; the policy layer owns the business decision.
+A practical extension is CSV ingestion with columns such as:
+
+`customer_id, propensity, uplift, customer_value, intervention_cost, segment`
+
+The decision engine can then operate on model outputs without pretending that it estimated causal effects itself.
+
+## Why this matters
+
+The important architectural boundary is:
+
+**business brief → structured assumptions → model evidence → economic policy → constrained action**
+
+The ML model produces evidence. The decision layer owns the allocation decision.
