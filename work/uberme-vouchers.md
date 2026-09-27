@@ -28,6 +28,11 @@ title: UberMe Vouchers — Experimentation & Product Delivery
   <p>My role included evaluating potential <b>cannibalization</b>, identifying analytical and product risks, monitoring the relevant outcomes and using experiment and customer evidence to support scaling decisions across markets.</p>
   <div class="impact"><b>20% → 50% → 100%</b> progressive rollout · deployment across <b>50+ countries</b></div>
 
+
+  <h2>How the work came together</h2>
+  <p>The work followed a clear product-data loop: understand the funnel, isolate the points of friction, translate those observations into testable interventions, measure both immediate and downstream behaviour, then use the evidence to guide rollout.</p>
+  <p>This kept the analysis tied to product decisions rather than treating experimentation as a reporting exercise. The same evidence was used to discuss rollout risk, potential cannibalization and whether the product was ready to scale further.</p>
+
   <h2>What this demonstrates</h2>
   <ul>
     <li><b>Experimentation:</b> hypothesis formation, metrics, guardrails and staged testing.</li>
