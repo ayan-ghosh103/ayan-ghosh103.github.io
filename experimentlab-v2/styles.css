@@ -10,3 +10,5 @@
 .metric-grid{margin:0}
 .metric-remove{font-size:12px;padding:5px 9px}
 .metric-actions{margin-top:10px}
+
+.evidence-summary{border:1px solid var(--line);border-radius:14px;overflow:hidden}.evidence-intro{padding:14px 16px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line)}.evidence-row{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line)}.evidence-row:last-child{border-bottom:0}.evidence-row small{display:block;color:var(--muted);margin-top:3px}.evidence-row b{font-size:13px}.evidence-row .favorable{color:#8ed34f}.evidence-row .unfavorable{color:#ff7b7b}.evidence-row .neutral{color:var(--muted)}
