@@ -842,3 +842,129 @@ if($("refreshReadout")) $("refreshReadout").onclick=renderExecutiveReadout;
 if($("printPDF2")) $("printPDF2").onclick=printPDF;
 if($("loadDemo")) $("loadDemo").onclick=()=>load(scenarioData($("scenario")?.value||"conversion"),"demo-experiment.csv");
 renderScenarioTimeline();
+
+
+/* Python FastAPI bridge — live portfolio backend */
+const EXPERIMENTLAB_API = "https://experimentlab-python.onrender.com";
+
+function pythonMetricPayload() {
+  const metrics = readMetricPlan().map(def => ({
+    name: def.name || def.column,
+    column: def.column,
+    type: def.type,
+    denominator: def.denominator || null,
+    role: def.role || (def.primary ? "Primary" : "Secondary")
+  }));
+  return {
+    rows,
+    metrics: metrics.length ? metrics : [{
+      name: metricLabel(getConfig()),
+      column: getConfig().metricColumn,
+      type: getConfig().metric,
+      denominator: getConfig().denominator || null,
+      role: "Primary"
+    }],
+    treatment_column: "treatment",
+    alpha: Number($("alpha")?.value || 0.05),
+    bootstrap_reps: Math.min(10000, Math.max(200, Number($("bootstrap")?.value || 2000))),
+    expected_treatment_share: Number($("allocation")?.value || 50) / 100
+  };
+}
+
+function renderPythonResult(api) {
+  if (!api?.metrics?.length) return;
+  const primary = api.metrics.find(x => x.role === "Primary") || api.metrics[0];
+
+  // Keep the rest of ExperimentLab's UI intact, but make the headline
+  // statistical result come from the Python/FastAPI engine.
+  if (primary) {
+    lastResult = {
+      config: getConfig(),
+      res: {
+        control: primary.control,
+        treatment: primary.treatment,
+        diff: primary.absolute_effect,
+        lift: primary.relative_lift,
+        se: primary.standard_error,
+        p: primary.p_value,
+        lo: primary.ci95?.[0],
+        hi: primary.ci95?.[1]
+      }
+    };
+
+    const c = getConfig();
+    card("effect", [
+      {l:"Control", v:c.metric==="binary"?pct(primary.control):fmt(primary.control), s:"Python estimate"},
+      {l:"Treatment", v:c.metric==="binary"?pct(primary.treatment):fmt(primary.treatment), s:"Python estimate"},
+      {l:"Absolute effect", v:c.metric==="binary"?fmt(primary.absolute_effect*100)+" pp":fmt(primary.absolute_effect), s:"treatment − control"},
+      {l:"Relative lift", v:pct(primary.relative_lift,1), s:"relative to control"}
+    ]);
+
+    const boot = primary.bootstrap_ci95 || [];
+    card("inference", [
+      {l:"95% normal CI", v:c.metric==="binary"
+        ?fmt(primary.ci95?.[0]*100)+" to "+fmt(primary.ci95?.[1]*100)+" pp"
+        :fmt(primary.ci95?.[0])+" to "+fmt(primary.ci95?.[1]), s:"Python / SciPy"},
+      {l:"95% bootstrap CI", v:c.metric==="binary"
+        ?fmt(boot[0]*100)+" to "+fmt(boot[1]*100)+" pp"
+        :fmt(boot[0])+" to "+fmt(boot[1]), s:"Python deterministic bootstrap"},
+      {l:"p-value", v:Number.isFinite(primary.p_value)?primary.p_value.toFixed(4):"—", s:"Python statistical engine"},
+      {l:"Inference", v:Number.isFinite(primary.p_value)&&primary.p_value<c.alpha?"Evidence of non-zero effect":"Inconclusive at configured alpha", s:"not a ship/no-ship rule"}
+    ]);
+  }
+
+  const h = api.health || {};
+  card("health", [
+    {l:"Control N", v:(primary?.control_n||0).toLocaleString(), s:"valid observations · Python"},
+    {l:"Treatment N", v:(primary?.treatment_n||0).toLocaleString(), s:"valid observations · Python"},
+    {l:"Allocation", v:Number.isFinite(h.treatment_share)?pct(h.treatment_share,1):"—", s:"observed treatment share"},
+    {l:"SRM", v:h.srm_status==="review"?"Review":"Pass", s:h.srm_status==="review"?"allocation differs by >10%":"within configured threshold"}
+  ]);
+
+  const q = api.data_quality || {};
+  $("status").textContent =
+    "Python engine · "+q.rows_used.toLocaleString()+" valid rows"+
+    " · "+q.rows_excluded.toLocaleString()+" excluded"+
+    " · "+q.missing_values.toLocaleString()+" missing"+
+    " · "+q.invalid_values.toLocaleString()+" invalid values";
+
+  if (q.warnings?.length) {
+    $("status").textContent += " · Review: "+q.warnings[0];
+  }
+}
+
+async function runPythonAnalysis() {
+  if (!rows?.length) return;
+  const status = $("status");
+  const previous = status?.textContent || "";
+  if (status) status.textContent = "Sending experiment data to Python statistical engine…";
+
+  try {
+    const response = await fetch(EXPERIMENTLAB_API + "/analyze", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(pythonMetricPayload())
+    });
+
+    if (!response.ok) throw new Error("API returned HTTP " + response.status);
+    const api = await response.json();
+    renderPythonResult(api);
+  } catch (error) {
+    // The existing browser implementation remains available as a graceful
+    // fallback if the free Render instance is sleeping or temporarily down.
+    if (status) status.textContent = previous + " · Python API unavailable; browser calculation retained.";
+    console.warn("ExperimentLab Python API:", error);
+  }
+}
+
+function schedulePythonAnalysis() {
+  window.setTimeout(runPythonAnalysis, 0);
+}
+
+$("calculateExperiment")?.addEventListener("click", schedulePythonAnalysis);
+$("loadDemo")?.addEventListener("click", schedulePythonAnalysis);
+$("scenario")?.addEventListener("change", schedulePythonAnalysis);
+$("file")?.addEventListener("change", schedulePythonAnalysis);
+
+// Initial demo: wait until the existing browser demo has loaded its rows.
+window.setTimeout(runPythonAnalysis, 250);
