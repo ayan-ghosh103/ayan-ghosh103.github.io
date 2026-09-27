@@ -226,12 +226,33 @@ function downloadHTML(){
 function printPDF(){window.print();}
 
 function load(data,name){rows=data; $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows"+(name?" · "+name:"")+"."; renderAnalysis();}
+/* Register file/drop inputs before any analysis initialization can fail. */
+$("file").addEventListener("change",e=>{
+  const f=e.target.files&&e.target.files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{loadUploaded(parseCSV(r.result),f.name);}catch(err){console.error("CSV upload:",err);$("status").textContent="CSV upload error: "+err.message;}};
+  r.onerror=()=>{$("status").textContent="Could not read the CSV file.";};
+  r.readAsText(f);
+});
+$("dropzone").addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="copy";});
+$("dropzone").addEventListener("drop",e=>{
+  e.preventDefault();
+  const f=e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(!f)return;
+  if(!/\.csv$/i.test(f.name)){$("status").textContent="Please drop a CSV file.";return;}
+  const r=new FileReader();
+  r.onload=()=>{try{loadUploaded(parseCSV(r.result),f.name);}catch(err){console.error("CSV drop:",err);$("status").textContent="CSV upload error: "+err.message;}};
+  r.onerror=()=>{$("status").textContent="Could not read the dropped CSV file.";};
+  r.readAsText(f);
+});
 $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";$("baseline").value=b?"10":"50";$("baselineSd").disabled=b;$("baselineSd").value=b?"":"20";renderAnalysis();});
 ["metricColumn","denominatorColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
-$("file").addEventListener("change",e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>loadUploaded(parseCSV(r.result),f.name);r.readAsText(f);}});
-$("loadDemo").onclick=()=>load(demo(),"demo-experiment.csv");
-$("dropzone").addEventListener("dragover",e=>e.preventDefault());$("dropzone").addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>loadUploaded(parseCSV(r.result),f.name);r.readAsText(f);}});
+
+$("loadDemo").onclick=()=>
+
 $("downloadHTML").onclick=downloadHTML;$("printPDF").onclick=printPDF;if($("runPower")) $("runPower").onclick=powerMDE;
+load(demo(),"demo-experiment.csv");
 load(demo(),"demo-experiment.csv");
 
 /* ExperimentLab scenario + sequential monitoring layer */
