@@ -196,10 +196,11 @@ function renderPlanning(){
     }).length;
     const calc=planningNumbers(def,st,nRows);
     const baseDisplay=def.type==="binary"?(Number(st.baseline)*100).toFixed(2):(Number(st.baseline).toFixed(3));
+    const baselineLabel=def.type==="binary"?"Baseline rate (%)":(def.type==="ratio"?"Baseline ratio":"Baseline");
     const targetUnit=def.type==="binary"&&st.mdeType==="absolute"?"pp":(st.mdeType==="relative"?"%":"units");
     const currentUnit=def.type==="binary"?"pp":(def.type==="ratio"?"ratio units":"units");
     return '<article class="planning-card"><div class="planning-head"><div><span class="metric-role-label">'+escapeHtml(def.role)+'</span><h3>'+escapeHtml(def.name)+'</h3><small>'+escapeHtml(def.column)+' · '+escapeHtml(metricDirectionText(def))+'</small></div><strong>N='+nRows.toLocaleString()+'</strong></div>'+
-      '<div class="grid planning-grid"><label>Baseline '+(def.type==="binary"?"rate %":"")+'<input type="number" step="any" data-plan-key="'+escapeHtml(key)+'" data-plan-field="baseline" value="'+escapeHtml(baseDisplay)+'"></label>'+
+      '<div class="grid planning-grid"><label>'+baselineLabel+'<input type="number" step="any" data-plan-key="'+escapeHtml(key)+'" data-plan-field="baseline" value="'+escapeHtml(baseDisplay)+'"></label>'+
       (def.type==="binary"?'': '<label>Baseline SD<input type="number" step="any" data-plan-key="'+escapeHtml(key)+'" data-plan-field="sd" value="'+(Number.isFinite(Number(st.sd))?escapeHtml(Number(st.sd).toFixed(3)):"")+'"></label>')+
       '<label>MDE type<select data-plan-key="'+escapeHtml(key)+'" data-plan-field="mdeType"><option value="relative" '+(st.mdeType==="relative"?"selected":"")+'>Relative %</option><option value="absolute" '+(st.mdeType==="absolute"?"selected":"")+'>Absolute '+(def.type==="binary"?"pp":"units")+'</option></select></label>'+
       '<label>Target MDE ('+targetUnit+')<input type="number" step="any" min="0" data-plan-key="'+escapeHtml(key)+'" data-plan-field="targetMde" value="'+escapeHtml(st.targetMde)+'"></label></div>'+
