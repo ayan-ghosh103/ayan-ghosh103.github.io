@@ -515,6 +515,37 @@ function reportMetricTable(metrics){
   return '<div class="metric-readout-table"><table><thead><tr><th>Role</th><th>Metric</th><th>Control</th><th>Treatment</th><th>Effect</th><th>Direction / status</th><th>95% CI</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
 }
 
+
+function renderExecutiveReadout(){
+  const host=$("executiveReadout");
+  if(!host||!lastResult)return;
+  const c=getConfig(), metrics=readMetricPlan(), primary=metrics.find(x=>x.primary)||{name:c.metricColumn||"Primary metric",type:c.metric,column:c.metricColumn,denominator:c.denominator,direction:"up"};
+  const r=metricResult(primary)||lastResult.res;
+  const arms=t=>rows.filter(x=>Number(x.treatment)===t), cn=arms(0).length, tn=arms(1).length;
+  const effect=metricEffectLabel(primary,r?.diff), lift=pct(r?.lift,1);
+  const ci=r?(primary.type==="binary"?fmt(r.lo*100,2)+" to "+fmt(r.hi*100,2)+" pp":fmt(r.lo,2)+" to "+fmt(r.hi,2)):"—";
+  const status=metricDirectionStatus(primary,r);
+  const statusClass=status==="Favorable"?"favorable":status==="Unfavorable"?"unfavorable":"neutral";
+  const maxArm=Math.max(r?.control||0,r?.treatment||0)||1;
+  const cw=Math.max(5,(r?.control||0)/maxArm*100), tw=Math.max(5,(r?.treatment||0)/maxArm*100);
+  const support=metrics.filter(x=>!x.primary);
+  const table=metrics.map(def=>{
+    const m=metricResult(def);
+    if(!m)return '<tr><td><b>'+escapeHtml(def.role)+'</b></td><td>'+escapeHtml(def.name)+'</td><td colspan="5">Insufficient numeric data</td></tr>';
+    const cls=metricDirectionStatus(def,m)==="Favorable"?"favorable":metricDirectionStatus(def,m)==="Unfavorable"?"unfavorable":"neutral";
+    const dci=def.type==="binary"?fmt(m.lo*100,2)+" to "+fmt(m.hi*100,2)+" pp":fmt(m.lo,2)+" to "+fmt(m.hi,2);
+    return '<tr><td><b>'+escapeHtml(def.role)+'</b></td><td><b>'+escapeHtml(def.name)+'</b><small>'+escapeHtml(def.column)+' · '+escapeHtml(metricDirectionText(def))+'</small></td><td>'+metricValueLabel(def,m.control)+'</td><td>'+metricValueLabel(def,m.treatment)+'</td><td><b>'+metricEffectLabel(def,m.diff)+'</b><small>'+pct(m.lift,1)+' lift</small></td><td><b class="readout-status '+cls+'">'+escapeHtml(metricDirectionStatus(def,m))+'</b><small>p='+m.p.toFixed(4)+'</small></td><td>'+dci+'</td></tr>';
+  }).join("");
+  const trends=reportTrendSections(metrics).replace(/chart-card/g,"readout-trend").replace(/chart-title/g,"readout-trend-title").replace(/chart-subtitle/g,"readout-trend-subtitle");
+  host.innerHTML='<div class="readout-hero"><div class="readout-eyebrow">Decision-ready experiment readout</div><h3>'+escapeHtml(primary.name)+'</h3><p class="readout-sub">Treatment vs control · primary effect, uncertainty, supporting metrics and guardrails</p><div class="readout-meta"><span><b>'+cn.toLocaleString()+' / '+tn.toLocaleString()+'</b>control / treatment observations</span><span><b>'+escapeHtml(primary.column||"—")+'</b>primary metric</span><span><b>'+escapeHtml(metricDirectionText(primary))+'</b>success direction</span><span><b>'+escapeHtml($("timeColumn")?.value||"Not detected")+'</b>time field</span></div></div>'+
+  '<div class="readout-cards"><div class="readout-card"><div class="label">Control</div><strong>'+metricValueLabel(primary,r?.control)+'</strong><span>primary metric baseline</span></div><div class="readout-card"><div class="label">Treatment</div><strong>'+metricValueLabel(primary,r?.treatment)+'</strong><span>primary metric observed</span></div><div class="readout-card"><div class="label">Primary effect</div><strong>'+effect+'</strong><span>'+escapeHtml(status)+'</span></div><div class="readout-card"><div class="label">Relative lift</div><strong>'+lift+'</strong><span>relative to control</span></div></div>'+
+  '<div class="readout-section"><h3>Primary outcome</h3><p class="readout-muted">'+escapeHtml(primary.name)+' · '+escapeHtml(primary.column||c.metricColumn||"")+'</p><div class="readout-comparison"><div class="readout-arm"><h4>Control</h4><div class="readout-value">'+metricValueLabel(primary,r?.control)+'</div><div class="readout-bar"><div class="readout-fill control" style="width:'+cw+'%"></div></div></div><div class="readout-arm"><h4>Treatment</h4><div class="readout-value">'+metricValueLabel(primary,r?.treatment)+'</div><div class="readout-bar"><div class="readout-fill treatment" style="width:'+tw+'%"></div></div></div></div></div>'+
+  '<div class="readout-section"><h3>Supporting metrics & guardrails</h3><p class="readout-muted">Interpret these against the pre-specified role and direction of each metric.</p><div style="overflow:auto"><table class="readout-table"><thead><tr><th>Role</th><th>Metric</th><th>Control</th><th>Treatment</th><th>Effect</th><th>Status</th><th>95% CI</th></tr></thead><tbody>'+table+'</tbody></table></div></div>'+
+  '<div class="readout-section"><h3>Trend view</h3><p class="readout-muted">Treatment and control over time for configured metrics.</p>'+trends+'</div>'+
+  '<div class="readout-section"><h3>Uncertainty</h3><div class="readout-cards"><div class="readout-card"><div class="label">95% CI</div><strong>'+ci+'</strong><span>normal approximation</span></div><div class="readout-card"><div class="label">p-value</div><strong>'+(r?.p?.toFixed(4)||"—")+'</strong><span>two-sided test</span></div><div class="readout-card"><div class="label">Control N</div><strong>'+cn.toLocaleString()+'</strong><span>observations</span></div><div class="readout-card"><div class="label">Treatment N</div><strong>'+tn.toLocaleString()+'</strong><span>observations</span></div></div></div>'+
+  '<div class="readout-callout"><b>Readout context:</b> Review the primary effect together with uncertainty, secondary metrics, guardrails and experiment integrity. This view intentionally omits configuration, power planning and causal-design mechanics.</div>';
+}
+
 function downloadHTML(){
   const c=getConfig(),r=lastResult?.res,series=reportSeries(c),metrics=readMetricPlan(),primaryMetrics=metrics.filter(x=>x.primary),supportingMetrics=metrics.filter(x=>!x.primary),primary=primaryMetrics[0]||{name:"Primary metric",type:c.metric,column:c.metricColumn},title="ExperimentLab · Experiment Readout";
   const effect=r?(c.metric==="binary"?fmt(r.diff*100,2)+" pp":fmt(r.diff,2)):"—",lift=r?pct(r.lift,1):"—",ci=r?(c.metric==="binary"?fmt(r.lo*100,2)+" to "+fmt(r.hi*100,2)+" pp":fmt(r.lo,2)+" to "+fmt(r.hi,2)):"—";
@@ -805,6 +836,7 @@ applyScenario=function(type){ originalApplyScenario(type); renderScenarioTimelin
 const originalRenderSequentialMonitoring=renderSequentialMonitoring;
 renderSequentialMonitoring=function(){ originalRenderSequentialMonitoring(); renderScenarioTimeline(); };
 if($("downloadHTML2")) $("downloadHTML2").onclick=downloadHTML;
+if($("refreshReadout")) $("refreshReadout").onclick=renderExecutiveReadout;
 if($("printPDF2")) $("printPDF2").onclick=printPDF;
 if($("loadDemo")) $("loadDemo").onclick=()=>load(scenarioData($("scenario")?.value||"conversion"),"demo-experiment.csv");
 renderScenarioTimeline();
