@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Decision Engine — ML to Business Value</title><link rel="stylesheet" href="./styles.css"></head>
+<body>
+<header><nav><a href="../">AYAN GHOSH</a><span><a href="#problem">Problem</a><a href="#simulator">Simulator</a><a href="#method">Method</a></span></nav></header>
+<main>
+<section class="hero"><div class="eyebrow">INDEPENDENT BUILD · ML · CAUSAL INFERENCE · DECISION SCIENCE</div>
+<h1>From model scores to business decisions.</h1>
+<p class="lede">A decision simulator that separates three questions that are often collapsed into one: who is likely to respond, who is likely to respond because of the intervention, and where an intervention actually creates economic value.</p>
+<div class="hero-grid"><div><span class="kicker">THE PROBLEM</span><h3>High propensity ≠ high incremental value.</h3><p>A model can identify customers who are very likely to convert without an intervention. Targeting them may create little incremental impact while spending scarce incentive budget.</p></div><div><span class="kicker">THE APPROACH</span><h3>Predict → estimate incrementality → optimize.</h3><p>The simulator turns model outputs into an explicit policy: intervene, hold out, or deprioritise — based on expected incremental value rather than propensity alone.</p></div></div>
+</section>
+
+<section id="problem" class="section"><div class="section-head"><span class="eyebrow">01 · DECISION FRAME</span><h2>The prediction is not the decision.</h2><p>For each customer, the simulator keeps the prediction, causal effect and economics separate.</p></div>
+<div class="cards three"><div class="card"><small>01 · PROPENSITY</small><strong>P(Y=1 | X)</strong><span>How likely is the outcome under the observed population?</span></div>
+<div class="card"><small>02 · INCREMENTALITY</small><strong>τ(X)</strong><span>How much does the intervention change the outcome for this customer?</span></div>
+<div class="card"><small>03 · VALUE</small><strong>ΔValue − Cost</strong><span>Does intervening create positive expected business value?</span></div></div>
+<div class="callout"><b>Core decision rule:</b> intervene when expected incremental value × unit economics − intervention cost is positive, subject to risk and capacity constraints.</div></section>
+
+<section id="simulator" class="section"><div class="section-head"><span class="eyebrow">02 · DECISION SIMULATOR</span><h2>Change the policy. Recalculate the business.</h2><p>Use the controls to test how targeting strategy changes reach, incremental conversions, revenue and ROI.</p></div>
+<div class="control-grid">
+<label>Population size<input id="population" type="number" value="100000" min="1000" step="1000"></label>
+<label>Intervention cost / customer<input id="cost" type="number" value="2.10" min="0" step="0.10"></label>
+<label>Value / incremental conversion<input id="value" type="number" value="18.40" min="0" step="0.50"></label>
+<label>Targeting threshold<input id="threshold" type="range" min="0" max="100" value="55"><output id="thresholdOut">55</output></label>
+<label>Model precision<input id="precision" type="range" min="50" max="95" value="78"><output id="precisionOut">78%</output></label>
+<label>Capacity limit (% population)<input id="capacity" type="range" min="5" max="100" value="35"><output id="capacityOut">35%</output></label>
+</div>
+<div class="actions"><button id="recalculate" class="primary">Recalculate decision policy</button><button id="reset">Reset scenario</button></div>
+
+<div class="dashboard"><div class="decision"><small>RECOMMENDED POLICY</small><strong id="policy">—</strong><span id="policyReason">—</span></div>
+<div class="cards four"><div class="card"><small>Eligible</small><strong id="eligible">—</strong><span>customers targeted</span></div>
+<div class="card"><small>Incremental conversions</small><strong id="incremental">—</strong><span>estimated treatment effect</span></div>
+<div class="card"><small>Incremental value</small><strong id="incrementalValue">—</strong><span>before intervention cost</span></div>
+<div class="card"><small>Net value</small><strong id="netValue">—</strong><span>after intervention cost</span></div></div></div>
+
+<div class="viz-grid"><div class="panel"><h3>Propensity vs incremental effect</h3><div id="scatter" class="scatter"></div><p class="muted">Each point represents a simulated customer segment. The upper-right region contains customers who are both likely to convert and strongly affected by intervention. The simulator prioritises incremental value, not propensity alone.</p></div>
+<div class="panel"><h3>Policy economics</h3><div id="bars"></div><div id="economicsText" class="muted"></div></div></div>
+</section>
+
+<section class="section"><div class="section-head"><span class="eyebrow">03 · POLICY COMPARISON</span><h2>What changes when the targeting rule changes?</h2></div>
+<div id="comparison" class="table-wrap"></div></section>
+
+<section id="method" class="section"><div class="section-head"><span class="eyebrow">04 · METHOD</span><h2>How the simulator is constructed.</h2><p>This is a proof-of-work system, not a claim that synthetic estimates are production estimates.</p></div>
+<div class="method-grid">
+<article><b>1. Generate heterogeneous customers</b><p>Customers receive latent propensity and treatment-effect characteristics. This creates a population where high-propensity users are not necessarily the users with the largest treatment effect.</p></article>
+<article><b>2. Produce model scores</b><p>A noisy propensity score is generated from the latent outcome propensity. Precision controls how much noise is introduced into ranking.</p></article>
+<article><b>3. Estimate incremental value</b><p>The policy uses the simulated conditional treatment effect τ(X), multiplied by value per incremental conversion, less intervention cost.</p></article>
+<article><b>4. Apply constraints</b><p>Capacity limits prevent the policy from targeting everyone with positive predicted value. The engine ranks candidates by expected net value and applies the operational constraint.</p></article>
+<article><b>5. Stress-test the policy</b><p>Threshold, model quality, unit economics and capacity can be changed independently. This makes the business sensitivity visible instead of hiding it behind a single model metric.</p></article>
+<article><b>6. Validate the decision layer</b><p>The key output is not AUC. It is incremental conversions, incremental value, cost, net value and ROI under a clearly stated targeting policy.</p></article>
+</div>
+<div class="callout"><b>Important distinction:</b> propensity modelling answers “who is likely to convert?” Uplift / causal modelling answers “who changes because of treatment?” The decision layer adds the economic question: “where should we spend the intervention?”</div>
+</section>
+<footer>Decision Engine · Independent proof-of-work · Runs entirely in the browser</footer>
+</main><script src="./app.js"></script></body></html>
