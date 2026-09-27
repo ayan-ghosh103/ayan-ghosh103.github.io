@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GenAI Experimentation & Causal Evaluation Platform — Ayan Ghosh</title><link rel="stylesheet" href="./styles.css"></head>
 <body>
-<header><nav><a href="../">AYAN GHOSH</a><div><a href="#overview">Overview</a><a href="#agents">Agents</a><a href="#quality">AI Quality</a><a href="#causal">Causal Impact</a><a href="#policy">Policy</a><a href="#method">Method</a></div></nav></header>
+<header><nav><a href="../">AYAN GHOSH</a><div><a href="#overview">Overview</a><a href="#quality">Evaluation</a><a href="#prompt">Prompt Tests</a><a href="#causal">Business Impact</a><a href="#policy">Policy</a></div></nav></header>
 <main class="container">
 <div class="case-header"><span class="eyebrow">INDEPENDENT BUILD · GENAI · EXPERIMENTATION · CAUSAL INFERENCE</span><a class="back-home" href="../">← Back to portfolio</a></div>
 <section class="hero" id="overview"><h1>Did the AI feature actually create value?</h1>
@@ -23,53 +23,106 @@ CATE / uplift → incremental economics → constrained routing policy</pre></di
 </section>
 
 
-<section id="agents" class="section agent-section">
-<div class="section-head"><span class="eyebrow">00 · AGENTIC EXECUTION LAYER</span><h2>Agents do the work. The evidence layer decides whether the work is worth shipping.</h2><p>The platform is not a dashboard wrapped around a chatbot. A planner coordinates specialized agents, every agent emits a structured trace, and downstream evaluation treats those traces as first-class experiment data.</p></div>
-<div class="agent-architecture">
-<div class="agent-node orchestrator"><small>ORCHESTRATOR</small><strong>Experiment & Decision Planner</strong><span>Parses the business brief · selects workflow · enforces tool / policy boundaries</span></div>
-<div class="agent-flow">↓</div>
-<div class="agent-grid">
-<article class="agent-card"><div class="agent-icon">01</div><small>PRODUCT AGENT</small><h3>AI Support Agent</h3><p>Decomposes the request, retrieves evidence, calls tools, drafts the response, verifies citations and decides whether to escalate.</p><code>retrieve → tool_call → synthesize → verify → respond</code></article>
-<article class="agent-card"><div class="agent-icon">02</div><small>EVALUATION AGENT</small><h3>Quality & Judge Agent</h3><p>Scores traces across faithfulness, relevance, citation correctness and task completion, then compares automated judgments with human labels.</p><code>score → calibrate → disagree → diagnose</code></article>
-<article class="agent-card"><div class="agent-icon">03</div><small>EXPERIMENT AGENT</small><h3>Experiment Designer</h3><p>Turns a product question into estimands, metrics, treatment arms, rollout design, power requirements and monitoring checks.</p><code>brief → estimand → metrics → design → monitor</code></article>
-<article class="agent-card"><div class="agent-icon">04</div><small>CAUSAL AGENT</small><h3>Causal Analyst</h3><p>Checks identification assumptions before selecting A/B, staggered DiD, event study or synthetic control and produces an auditable effect estimate.</p><code>diagnose → estimate → robustness → explain</code></article>
-<article class="agent-card"><div class="agent-icon">05</div><small>CAUSAL ML AGENT</small><h3>Heterogeneity Analyst</h3><p>Fits out-of-sample CATE / uplift models, evaluates policy value on holdout data and surfaces segments where treatment economics differ.</p><code>fit → cross-fit → CATE → policy_value</code></article>
-<article class="agent-card"><div class="agent-icon">06</div><small>POLICY AGENT</small><h3>Economic Router</h3><p>Combines causal effect, customer contribution, AI cost, capacity, latency and risk constraints into an explicit routing policy.</p><code>τ(X) → value − cost → constraints → route</code></article>
+<section id="quality" class="section">
+<div class="section-head">
+<span class="eyebrow">01 · GENAI EVALUATION ENGINEERING</span>
+<h2>Measure whether the system is actually getting better.</h2>
+<p>Evaluation is treated as a measurement system: define the rubric, inspect the evidence, validate the judge, slice failures, and test regressions before a prompt or model reaches the product experiment.</p>
+</div>
+
+<div class="evaluation-flow">
+<div><small>01</small><b>Trace</b><span>query · context · answer · citations</span></div><i>→</i>
+<div><small>02</small><b>Score</b><span>quality dimensions + latency + cost</span></div><i>→</i>
+<div><small>03</small><b>Calibrate</b><span>judge vs human-labelled set</span></div><i>→</i>
+<div><small>04</small><b>Diagnose</b><span>failure modes + slices</span></div><i>→</i>
+<div><small>05</small><b>Gate</b><span>regression + release criteria</span></div>
+</div>
+
+<div class="control-row">
+<label>Prompt version<select id="promptVersion"><option>V1 — baseline retrieval</option><option>V2 — citation constrained</option><option>V3 — structured answer</option><option>V4 — policy aware</option></select></label>
+<label>Judge strictness<input id="judgeStrict" type="range" min="70" max="100" value="90"><output id="judgeOut">90%</output></label>
+<button id="runEval">Run evaluation</button>
+</div>
+
+<div class="metric-grid">
+<div class="metric"><small>Faithfulness</small><strong id="faith">92.4%</strong><span>claims supported by retrieved context</span></div>
+<div class="metric"><small>Relevance</small><strong id="relevance">89.7%</strong><span>response addresses the user intent</span></div>
+<div class="metric"><small>Completeness</small><strong id="complete">91.2%</strong><span>required answer components covered</span></div>
+<div class="metric"><small>Citation correctness</small><strong id="citation">94.1%</strong><span>citations actually support claims</span></div>
+<div class="metric"><small>Hallucination rate</small><strong id="halluc">3.8%</strong><span>unsupported substantive claims</span></div>
+<div class="metric"><small>Instruction following</small><strong id="instruction">95.0%</strong><span>explicit format / policy constraints met</span></div>
+</div>
+
+<div class="eval-grid">
+<div class="panel">
+<h3>Evaluation contract</h3>
+<div class="contract-list">
+<div><b>Input</b><span>query, retrieved chunks, tool outputs, model response, citations, prompt/model version</span></div>
+<div><b>Scoring</b><span>pointwise rubric + pairwise comparison for prompt changes</span></div>
+<div><b>Uncertainty</b><span>paired bootstrap confidence intervals and per-slice error rates</span></div>
+<div><b>Release gate</b><span>no material regression in critical dimensions; judge calibration remains within tolerance</span></div>
 </div>
 </div>
-<div class="trace-console">
-<div class="trace-head"><div><span class="eyebrow">LIVE TRACE · SYNTHETIC RUN</span><h3>Agent run: “Should we roll out the new support assistant?”</h3></div><span class="status-pill">COMPLETED · 8.7s</span></div>
-<div class="trace-grid">
-<div class="trace-list" id="traceList">
-<button class="trace-step active" data-trace="0"><b>01</b><span>Planner</span><em>brief parsed</em></button>
-<button class="trace-step" data-trace="1"><b>02</b><span>Product Agent</span><em>6 tools called</em></button>
-<button class="trace-step" data-trace="2"><b>03</b><span>Evaluation Agent</span><em>240 traces scored</em></button>
-<button class="trace-step" data-trace="3"><b>04</b><span>Causal Agent</span><em>DiD + event study</em></button>
-<button class="trace-step" data-trace="4"><b>05</b><span>Causal ML Agent</span><em>4 segments</em></button>
-<button class="trace-step" data-trace="5"><b>06</b><span>Policy Agent</span><em>68% routing</em></button>
+<div class="panel">
+<h3>Operational metrics</h3>
+<div class="ops-grid">
+<div><small>p50 latency</small><b>1.4s</b></div><div><small>p95 latency</small><b>2.4s</b></div>
+<div><small>Cost / resolution</small><b>$0.21</b></div><div><small>Escalation rate</small><b>17.3%</b></div>
 </div>
-<div class="trace-detail" id="traceDetail"></div>
+<p class="note">Quality is evaluated together with latency, cost and escalation because a higher-scoring response is not automatically a better product experience.</p>
 </div>
 </div>
-<div class="callout agent-callout"><b>Agentic design principle:</b> agents are decision-making components, not black boxes. Each run records agent version, model, tool calls, inputs, outputs, latency, token usage, cost, confidence and downstream validation status. That trace can become the unit of analysis for reliability and product experimentation.</div>
+
+<div class="eval-drill">
+<div class="panel">
+<h3>Trace-level inspection</h3>
+<p class="note">Pick a failure class to inspect the evidence chain rather than trusting an aggregate score.</p>
+<div class="case-tabs">
+<button class="case-tab active" data-case="faithfulness">Faithfulness</button>
+<button class="case-tab" data-case="citation">Citation</button>
+<button class="case-tab" data-case="completeness">Completeness</button>
+<button class="case-tab" data-case="hallucination">Hallucination</button>
+</div>
+<div id="evalCase" class="eval-case"></div>
+</div>
+</div>
+
+<div class="two-panels">
+<div class="panel">
+<h3>LLM-as-a-judge calibration</h3>
+<div class="calibration-head"><strong>240</strong><span>evaluation traces · 60 human-labelled calibration examples</span></div>
+<div class="calibration-grid">
+<div><small>Human / judge agreement</small><b>0.86 κ</b><span>strong agreement, not ground truth</span></div>
+<div><small>False-positive rate</small><b>9%</b><span>judge flags a valid answer</span></div>
+<div><small>False-negative rate</small><b>6%</b><span>judge misses an invalid answer</span></div>
+<div><small>Disagreement rate</small><b>12%</b><span>routed to human error analysis</span></div>
+</div>
+<p class="note">The judge is a measurement instrument. Calibration, disagreement slices and judge-version drift are monitored before its scores are used as release evidence.</p>
+</div>
+<div class="panel">
+<h3>Failure-mode analysis</h3>
+<div class="failure-list">
+<div><b>Citation boundary ambiguity</b><span>Claim is supported, but the citation is attached too broadly.</span><em>8 cases</em></div>
+<div><b>Partial retrieval</b><span>Relevant evidence exists but the top-k context misses a required fact.</span><em>6 cases</em></div>
+<div><b>Over-compression</b><span>Answer is faithful but omits a required decision detail.</span><em>5 cases</em></div>
+<div><b>Unsupported inference</b><span>Model adds a plausible conclusion not contained in evidence.</span><em>4 cases</em></div>
+</div>
+</div>
+</div>
+
+<div class="callout"><b>Evaluation principle:</b> an aggregate score is the starting point, not the conclusion. Every release can be traced from a metric change to the underlying examples, retrieved evidence, judge rationale and human review.</div>
 </section>
 
-<section id="quality" class="section"><div class="section-head"><span class="eyebrow">01 · EVALUATION ENGINEERING</span><h2>Response quality is necessary, not sufficient.</h2><p>The platform evaluates each answer on multiple dimensions, then tests whether the automated judge behaves like a calibrated measurement system.</p></div>
-<div class="control-row"><label>Prompt version<select id="promptVersion"><option>V1 — baseline retrieval</option><option>V2 — citation constrained</option><option>V3 — structured answer</option><option>V4 — policy aware</option></select></label><label>Judge strictness<input id="judgeStrict" type="range" min="70" max="100" value="90"><output id="judgeOut">90%</output></label><button id="runEval">Run evaluation</button></div>
-<div class="metric-grid"><div class="metric"><small>Faithfulness</small><strong id="faith">92.4%</strong><span>claim supported by retrieved context</span></div><div class="metric"><small>Relevance</small><strong id="relevance">89.7%</strong><span>answer addresses the user request</span></div><div class="metric"><small>Citation correctness</small><strong id="citation">94.1%</strong><span>citations support cited claims</span></div><div class="metric"><small>Hallucination rate</small><strong id="halluc">3.8%</strong><span>unsupported substantive claims</span></div><div class="metric"><small>p95 latency</small><strong>2.4s</strong><span>retrieval + generation path</span></div><div class="metric"><small>Cost / resolution</small><strong>$0.21</strong><span>LLM, retrieval and infrastructure</span></div></div>
-<div class="two-panels"><div class="panel"><h3>Judge calibration</h3><div class="bars"><div><span>Human / judge agreement</span><b style="width:86%"></b><em>0.86 κ</em></div><div><span>False-positive rate</span><b style="width:9%"></b><em>9%</em></div><div><span>False-negative rate</span><b style="width:6%"></b><em>6%</em></div><div><span>Disagreement rate</span><b style="width:12%"></b><em>12%</em></div></div><p class="note">The judge is calibrated on a human-labelled subset rather than treated as ground truth. Disagreements are surfaced for error analysis.</p></div>
-<div class="panel"><h3>Evaluation dimensions</h3><div class="chips"><span>Faithfulness</span><span>Relevance</span><span>Completeness</span><span>Instruction following</span><span>Citation correctness</span><span>Context utilization</span><span>Hallucination</span></div><p class="note">Ragas / DeepEval-style metrics can be plugged into the same contract. The browser demo uses deterministic synthetic traces so the portfolio remains deployable on static hosting.</p></div></div>
-</section>
-
-<section id="prompt" class="section"><div class="section-head"><span class="eyebrow">02 · PROMPT EXPERIMENTATION</span><h2>Is V2 actually better than V1?</h2><p>Prompt quality is evaluated as a paired experiment: the same examples are scored under both versions, and inference is based on per-example differences.</p></div>
+<section id="prompt" class="section"><div class="section-head"><span class="eyebrow">02 · PROMPT EXPERIMENTATION</span><h2>Does the prompt improvement survive statistical testing?</h2><p>The same examples are scored under both versions. Per-example differences preserve the pairing, while bootstrap inference quantifies uncertainty before the change is allowed into an online product experiment.</p></div>
 <div class="version-grid"><div class="version-card"><small>CONTROL</small><h3>V1</h3><strong>84.8</strong><span>composite evaluation score</span></div><div class="delta">+4.7<br><small>95% CI [+3.6, +5.8]</small></div><div class="version-card"><small>TREATMENT</small><h3>V2</h3><strong>89.5</strong><span>composite evaluation score</span></div></div>
 <div class="stats-row"><span>Paired bootstrap <b>10,000 resamples</b></span><span>p-value <b>&lt; 0.001</b></span><span>Effect size <b>0.42 SD</b></span><span>Judge-human κ <b>0.86</b></span></div>
 <div class="callout"><b>Interpretation:</b> V2 improves offline response quality on the evaluation set. This is a model/product-quality result — it is not evidence that V2 increased customer conversion or revenue. That question is handled by the product experiment below.</div>
 </section>
 
-<section id="causal" class="section"><div class="section-head"><span class="eyebrow">03 · PRODUCT EXPERIMENT + CAUSAL INFERENCE</span><h2>Quality improvement ≠ incremental business impact.</h2><p>The simulated AI assistant was rolled out by geography on different dates. The platform makes the identification strategy visible instead of assuming a simple before/after comparison is causal.</p></div>
+<section id="causal" class="section"><div class="section-head"><span class="eyebrow">03 · CAUSAL BUSINESS IMPACT</span><h2>Better answers only matter if customers behave differently.</h2><p>The offline evaluation establishes model quality. The product experiment establishes whether that quality change creates incremental customer and business outcomes. The simulated AI assistant was rolled out by geography on different dates. The platform makes the identification strategy visible instead of assuming a simple before/after comparison is causal.</p></div>
 <div class="control-row"><label>Estimator<select id="estimator"><option>Staggered DiD + event study</option><option>Synthetic control</option><option>Randomized A/B test</option></select></label><label>Pre-period<select id="prePeriod"><option>28 days</option><option>42 days</option><option>56 days</option></select></label><button id="runCausal">Re-estimate</button></div>
 <div class="chart-panel"><div class="chart-title"><h3>Event-study treatment effects</h3><span id="estimatorLabel">Staggered DiD + event study</span></div><div id="eventChart" class="event-chart"></div><div class="chart-axis"><span>-6</span><span>-3</span><span>0</span><span>3</span><span>6</span><span>9</span><span>12</span></div><p class="note">Pre-treatment coefficients are close to zero in the simulated data. Post-rollout effects rise and then stabilise. The point is to diagnose the identifying assumptions, not merely report a treatment coefficient.</p></div>
+<div class="impact-bridge"><div><small>OFFLINE QUALITY</small><strong>+4.7 pts</strong><span>V1 → V2 composite evaluation score</span></div><i>→</i><div><small>PRODUCT OUTCOME</small><strong>+1.9 pp</strong><span>causal incremental conversion</span></div><i>→</i><div><small>ECONOMIC VALUE</small><strong>+$1.54M</strong><span>causal incremental revenue</span></div><i>→</i><div><small>NET VALUE</small><strong>$1.18M</strong><span>after AI + operational cost</span></div></div>
 <div class="metric-grid four"><div class="metric"><small>Incremental conversion</small><strong>+1.9 pp</strong><span>95% CI [+1.2, +2.6 pp]</span></div><div class="metric"><small>Incremental revenue</small><strong>+$1.54M</strong><span>95% CI [$0.91M, $2.17M]</span></div><div class="metric"><small>Human escalation</small><strong>−14.2%</strong><span>relative to control</span></div><div class="metric"><small>Average latency</small><strong>+0.31s</strong><span>treatment minus control</span></div></div>
 <div class="assumptions"><div><b>Identification checks</b><span>Parallel-trend diagnostics · cohort timing · overlap · stable outcome definition · interference review</span></div><div><b>Why not naive TWFE?</b><span>With staggered adoption and heterogeneous effects, a single two-way fixed-effects coefficient can combine cohort effects in undesirable ways. The demo uses cohort-aware event-study logic.</span></div></div>
 </section>
@@ -91,8 +144,8 @@ CATE / uplift → incremental economics → constrained routing policy</pre></di
 </section>
 
 <section id="method" class="section"><div class="section-head"><span class="eyebrow">07 · METHODOLOGY & PRODUCTION PATH</span><h2>The technical boundary matters.</h2></div>
-<div class="method-grid"><article><b>GenAI product</b><p>FastAPI service, retrieval layer, vector index, prompt/version registry, structured traces, token accounting and response citations.</p></article><article><b>LLM evaluation</b><p>Pointwise and pairwise evaluation, judge calibration against human labels, bootstrap confidence intervals, disagreement analysis and evaluation-set versioning.</p></article><article><b>Experimentation</b><p>Randomized A/B where feasible; paired bootstrap for offline prompt comparisons; CUPED only when a pre-treatment covariate is appropriate for variance reduction.</p></article><article><b>Causal identification</b><p>Staggered DiD / event studies for rollout timing, synthetic control for suitable aggregate interventions, and explicit pre-trend / overlap diagnostics.</p></article><article><b>Causal ML</b><p>Out-of-sample CATE / uplift models with policy-value evaluation, uplift curves and segment-level diagnostics rather than treating treatment-effect prediction as ordinary supervised learning.</p></article><article><b>Decision layer</b><p>Convert τ(X), customer contribution, AI cost, capacity, latency and risk constraints into a routing policy. The final artifact is an auditable decision, not only a model score.</p></article></div>
-<div class="callout"><b>What is synthetic:</b> the product traces, experiment data, causal estimates and economics shown here are deterministic portfolio data. The architecture and analysis contracts are designed so the same pipeline can consume real application traces and experimental data without changing the conceptual layers.</div>
+<div class="method-grid"><article><b>GenAI product + trace</b><p>FastAPI service, retrieval layer, vector index, prompt/version registry, structured traces, token accounting, response citations and model/tool metadata.</p></article><article><b>LLM evaluation</b><p>Pointwise and pairwise evaluation, judge calibration against human labels, bootstrap confidence intervals, disagreement analysis and evaluation-set versioning.</p></article><article><b>Experimentation</b><p>Randomized A/B where feasible; paired bootstrap for offline prompt comparisons; CUPED only when a pre-treatment covariate is appropriate for variance reduction.</p></article><article><b>Causal identification</b><p>Staggered DiD / event studies for rollout timing, synthetic control for suitable aggregate interventions, and explicit pre-trend / overlap diagnostics.</p></article><article><b>Causal ML</b><p>Out-of-sample CATE / uplift models with policy-value evaluation, uplift curves and segment-level diagnostics rather than treating treatment-effect prediction as ordinary supervised learning.</p></article><article><b>Decision layer</b><p>Convert τ(X), customer contribution, AI cost, capacity, latency and risk constraints into a routing policy. The final artifact is an auditable decision, not only a model score.</p></article></div>
+<div class="callout"><b>Production boundary:</b> application traces feed the evaluation contract; validated quality changes enter product experiments; causal estimates feed economics; economics and constraints feed rollout policy. <b>What is synthetic:</b> the product traces, experiment data, causal estimates and economics shown here are deterministic portfolio data. The architecture and analysis contracts are designed so the same pipeline can consume real application traces and experimental data without changing the conceptual layers.</div>
 </section>
 <footer><span>GenAI Experimentation & Causal Evaluation Platform · Independent proof-of-work · Synthetic data · Static interactive demo</span></footer>
 </main><script src="./app.js"></script></body></html>
