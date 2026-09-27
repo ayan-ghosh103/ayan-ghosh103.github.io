@@ -7,17 +7,48 @@ function money(x){return new Intl.NumberFormat("en-US",{style:"currency",currenc
 function num(x){return new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(x)}
 function percent(x){return (x*100).toFixed(1)+"%"}
 function extract(text){
- const t=text.toLowerCase().replace(/,/g,"");
- const get=(re)=>{const m=t.match(re);return m?Number(m[1]):null};
- const population=get(/(?:have|serve|reach|population|customers|cases)[^0-9]{0,30}(\d+(?:\.\d+)?)[ ]*(?:k|m|million|thousand)?/);
- const normalised=(v)=>v==null?null:(/k/.test(t.slice(Math.max(0,t.indexOf(String(v))-5),t.indexOf(String(v))+10))?v*1000:/m|million/.test(t.slice(Math.max(0,t.indexOf(String(v))-5),t.indexOf(String(v))+12))?v*1000000:v);
- const costs=[get(/(?:costs?|cost|spend|price)[^$0-9]{0,15}\$?\s*(\d+(?:\.\d+)?)/),get(/\$\s*(\d+(?:\.\d+)?)[^a-z]{0,8}(?:offer|voucher|incentive)/)];
- const value=get(/(?:worth|value|saves?|revenue)[^$0-9]{0,20}\$?\s*(\d+(?:\.\d+)?)/);
- const budget=get(/(?:budget|available)[^$0-9]{0,20}\$?\s*(\d+(?:\.\d+)?)[ ]*(k|m|million|thousand)?/);
- const cap=get(/(?:at most|max(?:imum)?|capacity)[^0-9]{0,20}(\d+(?:\.\d+)?)\s*%/);
- const scenario=/support|case|agent|automation/.test(t)?"support":/retention|churn|save a customer/.test(t)?"retention":/voucher|incentive|offer|order/.test(t)?"voucher":"custom";
- const objective=/roi|return/.test(t)?"roi":/revenue|value/.test(t)?"value":/conversion|order|save/.test(t)?"incremental":"value";
- return {scenario,objective,population:normalised(population),cost:costs.find(x=>x!=null)||null,value,budget:budget==null?null:(/k|thousand/.test(t.slice(Math.max(0,t.indexOf(String(budget))-5),t.indexOf(String(budget))+15))?budget*1000:/m|million/.test(t.slice(Math.max(0,t.indexOf(String(budget))-5),t.indexOf(String(budget))+15))?budget*1000000:budget),capacity:cap};
+ const raw=text.trim();
+ const t=raw.toLowerCase().replace(/,/g,"");
+ const numberAfter=(patterns)=>{
+   for(const re of patterns){const m=t.match(re);if(m)return {value:Number(m[1]),unit:m[2]||""};}
+   return null;
+ };
+ const scale=(x)=>x.unit&&/^k|thousand$/.test(x.unit)?x.value*1000:x.unit&&/^m|million$/.test(x.unit)?x.value*1000000:x.value;
+ const currency=(patterns)=>{
+   for(const re of patterns){const m=t.match(re);if(m)return Number(m[1]);}
+   return null;
+ };
+ const populationRaw=numberAfter([
+   /(?:have|serve|reach|manage|population of|base of|base has|customer base has|customers|users|cases)[^0-9]{0,35}(\d+(?:\.\d+)?)\s*(k|thousand|m|million)?/,
+   /(\d+(?:\.\d+)?)\s*(k|thousand|m|million)?\s*(?:customers|users|cases)/
+ ]);
+ const cost=currency([
+   /(?:costs?|costing|price(?:s)?|spend(?:ing)?)[^$₹€£0-9]{0,20}[$₹€£]?\s*(\d+(?:\.\d+)?)/,
+   /[$₹€£]\s*(\d+(?:\.\d+)?)[^a-z]{0,12}(?:offer|voucher|incentive|intervention)/
+ ]);
+ const value=currency([
+   /(?:worth|value(?:d)?|saves?|revenue|margin|profit)[^$₹€£0-9]{0,25}[$₹€£]?\s*(\d+(?:\.\d+)?)/,
+   /[$₹€£]\s*(\d+(?:\.\d+)?)[^a-z]{0,15}(?:per|each|incremental)\s*(?:customer|order|conversion|save|case)/
+ ]);
+ const budgetRaw=numberAfter([
+   /(?:budget|available budget|can spend|have to spend)[^0-9]{0,20}[$₹€£]?\s*(\d+(?:\.\d+)?)\s*(k|thousand|m|million)?/,
+   /[$₹€£]\s*(\d+(?:\.\d+)?)\s*(k|thousand|m|million)?\s*(?:budget|available)/
+ ]);
+ const cap=numberAfter([
+   /(?:at most|max(?:imum)?|capacity|reach|contact|target)[^0-9]{0,25}(\d+(?:\.\d+)?)\s*%/,
+   /(\d+(?:\.\d+)?)\s*%\s*(?:of|customers|users|cases)/
+ ]);
+ const scenario=/support|case|agent|automation/.test(t)?"support":/retention|churn|save|retain/.test(t)?"retention":/voucher|incentive|offer|order/.test(t)?"voucher":"custom";
+ const objective=/roi|return/.test(t)?"roi":/revenue|value|margin|profit/.test(t)?"value":/conversion|order|save|retain/.test(t)?"incremental":"value";
+ return {
+   scenario,objective,
+   population:populationRaw?scale(populationRaw):null,
+   cost,value,
+   budget:budgetRaw?scale(budgetRaw):null,
+   capacity:cap?cap.value:null,
+   _has:raw.length>5,
+   _raw:raw
+ };
 }
 function renderExtraction(){
  const fields=[["Population",parsed.population?num(parsed.population):null],["Intervention cost",parsed.cost!=null?money(parsed.cost):null],["Outcome value",parsed.value!=null?money(parsed.value):null],["Budget",parsed.budget!=null?money(parsed.budget):null],["Capacity",parsed.capacity!=null?parsed.capacity+"%":null],["Scenario",parsed.scenario==="custom"?"Needs classification":parsed.scenario]];
