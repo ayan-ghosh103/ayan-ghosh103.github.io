@@ -24,6 +24,11 @@ title: J.P. Morgan Cost-to-Serve — Decision Science
   <div class="impact"><b>£124 → £87</b> annual Customer Serving Cost per customer</div>
   <p>I also automated customer campaign tracking through a CXO-facing dashboard, replacing manual reporting and improving operational visibility, with efficiency equivalent to <b>0.5 FTE</b>.</p>
 
+
+  <h2>From model to operational decision</h2>
+  <p>The predictive model was one component of a broader decision-science workflow. Customer, agent and workload characteristics were used to understand case-resolution time; sensitivity analysis explored operational trade-offs; and process mining examined where complaint-resolution journeys were creating inefficiency.</p>
+  <p>The work therefore combined modelling with process understanding and stakeholder decision support, rather than optimising a model in isolation.</p>
+
   <h2>What this demonstrates</h2>
   <ul>
     <li><b>Data Science:</b> predictive modelling and analytical decision support.</li>
