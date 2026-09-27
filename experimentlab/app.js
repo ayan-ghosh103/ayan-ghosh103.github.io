@@ -193,3 +193,6 @@ function renderSequentialMonitoring(){
   const advice=s.mode==="running"?"Monitoring view: nominal p-values are shown for diagnostics, but the sequential boundary is the decision threshold. Do not repeatedly apply the final 0.05 threshold.":"Final analysis: use the pre-specified final alpha and planned analysis population.";
   $("sequential").innerHTML='<div class="monitor-head"><strong>'+label+'</strong><span>Look '+s.look+' of '+s.planned+' · information fraction '+(s.info*100).toFixed(0)+'%</span></div><div class="cards"><div class="card"><small>Nominal p-value</small><strong>'+s.nominalP?.toFixed(4)+'</strong><span>diagnostic only while running</span></div><div class="card"><small>Sequential alpha</small><strong>'+s.boundary.toFixed(4)+'</strong><span>approx. O’Brien–Fleming-style boundary</span></div><div class="card"><small>Z boundary</small><strong>'+s.zBoundary.toFixed(2)+'</strong><span>two-sided</span></div><div class="card"><small>Monitoring status</small><strong>'+s.decision+'</strong><span>'+advice+'</span></div></div>';
 }
+
+if($("scenario")) $("scenario").addEventListener("change",e=>applyScenario(e.target.value));
+["experimentState","lookNumber","plannedLooks","informationFraction"].forEach(id=>{if($(id)) $(id).addEventListener("change",renderSequentialMonitoring);});
