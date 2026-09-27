@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /work/jpmorgan-cost-to-serve/
 title: J.P. Morgan Cost-to-Serve — Decision Science
 ---
 <section class="case-page">
