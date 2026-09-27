@@ -1,6 +1,7 @@
 const $ = id => document.getElementById(id);
 let rows = [];
 let lastResult = null;
+let planningState = {};
 
 const fmt = (x, d=2) => Number.isFinite(x) ? x.toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d}) : "—";
 const pct = (x,d=2) => Number.isFinite(x) ? (x*100).toFixed(d)+"%" : "—";
@@ -112,7 +113,7 @@ function demo(){
   const r=[]; for(let i=0;i<1600;i++){const t=i%2, pre=80+Math.random()*40, conv=(Math.random()<(.12+(t?.035:0))?1:0), gb=Math.max(0,(t?52:47)+pre*.45+(Math.random()-.5)*35);r.push({treatment:t,conversion:conv,gross_bookings:gb,pre_metric:pre,country:["UK","US","DE","IN"][i%4]});} return r;
 }
 function getConfig(){
-  return {metric:$("metric").value, metricColumn:$("metricColumn").value.trim()||($("metric").value==="binary"?"conversion":"gross_bookings"), denominator:$("denominatorColumn")?.value.trim()||"denominator", pre:$("preColumn").value.trim(), expected:Number($("allocation").value)/100, alpha:Number($("alpha").value), power:Number($("power").value), mde:Number($("mde").value)/100, reps:Number($("bootstrap").value)};
+  return {metric:$("metric").value, metricColumn:$("metricColumn").value.trim()||($("metric").value==="binary"?"conversion":"gross_bookings"), denominator:$("denominatorColumn")?.value.trim()||"denominator", pre:$("preColumn").value.trim(), expected:Number($("allocation").value)/100, alpha:Number($("alpha").value), power:(Number($("planningPower")?.value || 80)/100), mde:0, reps:Number($("bootstrap").value)};
 }
 function metricLabel(c){return c.metric==="binary"?"Conversion rate":c.metric==="ratio"?"Ratio "+c.metricColumn+" / "+c.denominator:c.metric==="continuous"?"Average "+(c.metricColumn||"metric"):"Average "+(c.metricColumn||"revenue");}
 function validate(){
@@ -150,17 +151,64 @@ function binaryTest(c,t){
   return {control:cm,treatment:tm,diff,lift:cm?diff/cm:NaN,se,p,lo:diff-ci,hi:diff+ci};
 }
 
-function powerMDE(){
-  const c=getConfig(), n=rows.length, alloc=c.expected, nc=Math.max(1,Math.round(n*(1-alloc))),nt=Math.max(1,n-nc), alpha=c.alpha, zA=normalInv(1-alpha/2),zP=normalInv(c.power);
-  const baseline=Number($("baseline").value)/100, sdv=Number($("baselineSd").value), ratio=Math.sqrt(1/nc+1/nt);
-  let mde;
-  if(c.metric==="binary"){const v=baseline*(1-baseline);mde=(zA*Math.sqrt(v*ratio*ratio)+zP*Math.sqrt(v*ratio*ratio));}
-  else mde=(zA+zP)*sdv*ratio;
-  const target=c.mde||mde;
-  const effectText=c.metric==="binary"?pct(mde)+" absolute":"+"+fmt(mde)+" metric units";
-  card("powerResults",[{"l":"Observed total N","v":n.toLocaleString(),"s":"current dataset"},{"l":"Target power","v":pct(c.power),"s":"two-sided test"},{"l":"Approx. MDE","v":effectText,"s":c.metric==="binary"?"absolute difference":"continuous metric"},{"l":"Target MDE","v":c.metric==="binary"?pct(target):fmt(target),"s":"from configuration"}]);
-  $("powerNote").innerHTML=c.metric==="binary"?"Binary approximation uses the baseline conversion rate. For planning, verify with a dedicated power package when rates are extreme.":"Continuous approximation uses the baseline standard deviation and a normal-theory two-sample design.";
+function planningKey(def,i){return String(i)+"|"+def.role+"|"+def.column;}
+function planningDefaults(def,i){
+  const key=planningKey(def,i);
+  if(!planningState[key]) planningState[key]={mdeType:"relative",targetMde:5};
+  const control=rows.filter(r=>Number(r.treatment)===0);
+  if(def.type==="ratio"){
+    const vals=control.map(r=>({n:num(r[def.column]),d:num(r[def.denominator])})).filter(x=>Number.isFinite(x.n)&&Number.isFinite(x.d)&&x.d>0);
+    const dsum=vals.reduce((s,x)=>s+x.d,0), nsum=vals.reduce((s,x)=>s+x.n,0);
+    planningState[key].baseline=Number.isFinite(planningState[key].baseline)?planningState[key].baseline:(dsum?nsum/dsum:NaN);
+    const r=planningState[key].baseline;
+    const psi=vals.map(x=>x.n-r*x.d), md=mean(vals.map(x=>x.d));
+    planningState[key].sd=Number.isFinite(planningState[key].sd)?planningState[key].sd:(psi.length>1&&md?Math.sqrt(variance(psi))/(Math.abs(md)):NaN);
+  }else{
+    const vals=control.map(r=>num(r[def.column])).filter(Number.isFinite);
+    planningState[key].baseline=Number.isFinite(planningState[key].baseline)?planningState[key].baseline:(vals.length?mean(vals):NaN);
+    planningState[key].sd=Number.isFinite(planningState[key].sd)?planningState[key].sd:(vals.length>1?sd(vals):NaN);
+  }
+  return planningState[key];
 }
+function planningNumbers(def,state,eligibleN){
+  const alpha=Number($("alpha")?.value)||.05, power=(Number($("planningPower")?.value)||80)/100;
+  const q=Math.min(.99,Math.max(.01,Number($("allocation")?.value)/100||.5));
+  const zA=normalInv(1-alpha/2),zP=normalInv(power), factor=(zA+zP)**2/(q*(1-q));
+  const base=Number(state.baseline), target=Number(state.targetMde);
+  const rel=state.mdeType==="relative";
+  const delta=rel ? Math.abs(base)*(target/100) : (def.type==="binary"?target/100:Math.abs(target));
+  let variancePerUnit;
+  if(def.type==="binary") variancePerUnit=Math.max(1e-12,base*(1-base));
+  else variancePerUnit=Math.max(1e-12,Number(state.sd)**2);
+  const currentMde=Number.isFinite(base)&&Number.isFinite(variancePerUnit)?Math.sqrt(variancePerUnit*(1/Math.max(1,Math.round(eligibleN*(1-q)))+1/Math.max(1,Math.round(eligibleN*q))))*(zA+zP):NaN;
+  const requiredN=delta>0?variancePerUnit*factor/(delta*delta):NaN;
+  return {currentMde,requiredN,delta,power,alpha};
+}
+function renderPlanning(){
+  const host=$("planningRows"); if(!host)return;
+  const metrics=readMetricPlan();
+  host.innerHTML=metrics.map((def,i)=>{
+    const st=planningDefaults(def,i), key=planningKey(def,i), nRows=rows.filter(r=>{
+      const t=Number(r.treatment), valid=def.type==="ratio"
+        ? Number.isFinite(num(r[def.column]))&&Number.isFinite(num(r[def.denominator]))&&num(r[def.denominator])>0
+        : Number.isFinite(num(r[def.column]));
+      return valid&&(t===0||t===1);
+    }).length;
+    const calc=planningNumbers(def,st,nRows);
+    const baseDisplay=def.type==="binary"?(Number(st.baseline)*100).toFixed(2):(Number(st.baseline).toFixed(3));
+    const targetUnit=def.type==="binary"&&st.mdeType==="absolute"?"pp":(st.mdeType==="relative"?"%":"units");
+    const currentUnit=def.type==="binary"?"pp":(def.type==="ratio"?"ratio units":"units");
+    return '<article class="planning-card"><div class="planning-head"><div><span class="metric-role-label">'+escapeHtml(def.role)+'</span><h3>'+escapeHtml(def.name)+'</h3><small>'+escapeHtml(def.column)+' · '+escapeHtml(metricDirectionText(def))+'</small></div><strong>N='+nRows.toLocaleString()+'</strong></div>'+
+      '<div class="grid planning-grid"><label>Baseline '+(def.type==="binary"?"rate %":"")+'<input type="number" step="any" data-plan-key="'+escapeHtml(key)+'" data-plan-field="baseline" value="'+escapeHtml(baseDisplay)+'"></label>'+
+      (def.type==="binary"?'': '<label>Baseline SD<input type="number" step="any" data-plan-key="'+escapeHtml(key)+'" data-plan-field="sd" value="'+(Number.isFinite(Number(st.sd))?escapeHtml(Number(st.sd).toFixed(3)):"")+'"></label>')+
+      '<label>MDE type<select data-plan-key="'+escapeHtml(key)+'" data-plan-field="mdeType"><option value="relative" '+(st.mdeType==="relative"?"selected":"")+'>Relative %</option><option value="absolute" '+(st.mdeType==="absolute"?"selected":"")+'>Absolute '+(def.type==="binary"?"pp":"units")+'</option></select></label>'+
+      '<label>Target MDE ('+targetUnit+')<input type="number" step="any" min="0" data-plan-key="'+escapeHtml(key)+'" data-plan-field="targetMde" value="'+escapeHtml(st.targetMde)+'"></label></div>'+
+      '<div class="cards planning-results"><div class="card"><small>Approx. MDE @ current N</small><strong>'+ (Number.isFinite(calc.currentMde)?(def.type==="binary"?fmt(calc.currentMde*100,2)+" pp":fmt(calc.currentMde,3)+" "+currentUnit):"—")+'</strong><span>at '+Math.round(calc.power*100)+'% power</span></div><div class="card"><small>Approx. N @ target MDE</small><strong>'+ (Number.isFinite(calc.requiredN)?Math.ceil(calc.requiredN).toLocaleString():"—")+'</strong><span>total eligible N</span></div><div class="card"><small>Baseline</small><strong>'+baseDisplay+(def.type==="binary"?"%":"")+'</strong><span>control arm</span></div></div></article>';
+  }).join("");
+  const primaries=metrics.filter(x=>x.primary);
+  $("powerNote").innerHTML=(primaries.length>1?'<strong>Multiple primary metrics:</strong> N estimates are calculated per metric and do not account for multiplicity. If joint primary claims are required, apply a pre-specified multiplicity strategy. ':'')+'These are approximate normal-theory planning estimates. Ratio metrics use a delta-method-style variance estimate; verify important decisions with simulation or a dedicated power package.';
+}
+function powerMDE(){renderPlanning();}
 
 function renderAnalysis(){
   const err=validate(); if(err){$("status").textContent=err;return;}
@@ -527,9 +575,17 @@ if(csvDrop){
     readExperimentCSV(file);
   },true);
 }
-$("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";$("baseline").value=b?"10":"50";$("baselineSd").disabled=b;$("baselineSd").value=b?"":"20";renderAnalysis();});
-["metricColumn","denominatorColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
+$("metric").addEventListener("change",()=>{renderAnalysis();});
+["metricColumn","denominatorColumn","preColumn","allocation","alpha","bootstrap","planningPower","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
 
+
+
+$("planningRows")?.addEventListener("change",e=>{
+  const el=e.target, key=el.dataset.planKey, field=el.dataset.planField; if(!key||!field)return;
+  planningState[key]=planningState[key]||{};
+  planningState[key][field]=field==="mdeType"?el.value:Number(el.value);
+  renderPlanning();
+});
 
 /* Statistical self-validation: deterministic fixtures with known ground truth. */
 function validationRng(seed){
