@@ -36,6 +36,25 @@ title: McAfee Personalisation & Recommendation Systems
   <p>A key part of the work was distinguishing between understanding customers and deciding what to do for them. Segmentation established behavioural groups; recommendation models translated those patterns into product suggestions; uplift modelling added an intervention lens for retention and engagement targeting.</p>
   <p>This created a more decision-oriented ML workflow: identify the customer context, estimate what action is relevant, and connect the output to a commercial or customer-experience objective.</p>
 
+
+  <h2>Problem framing</h2>
+  <p>The underlying problem was not simply “build a recommender.” Customer behaviour varied substantially, so the first step was understanding the behavioural structure of the customer base. Segmentation provided a way to reason about those differences before deciding which product or retention intervention was relevant.</p>
+
+  <h2>Modelling approach</h2>
+  <p>The work combined several ML components: behavioural segmentation, personalised recommendation models and uplift modelling. Each served a different decision:</p>
+  <ul>
+    <li><b>Segmentation:</b> identify meaningful behavioural groups and differences in engagement.</li>
+    <li><b>Recommendation:</b> determine which products could be more relevant for different customer contexts.</li>
+    <li><b>Uplift modelling:</b> identify customers for whom an intervention could change behaviour, rather than simply predicting likely responders.</li>
+  </ul>
+
+  <h2>Model-to-business connection</h2>
+  <p>The models were evaluated in the context of customer and commercial decisions. The broader objective was subscription churn reduction and improved product relevance, while the same customer-level understanding also supported analysis of price sensitivity and dynamic subscription pricing.</p>
+  <p>This made the work broader than an offline modelling exercise: the analytical outputs were designed to support decisions about <b>who to target, what to recommend and how to think about commercial treatment</b>.</p>
+
+  <h2>Technical workflow</h2>
+  <p>I used <b>MLflow</b> as part of the model development workflow, alongside Python-based machine learning and customer-level analytical work. This provided a structured way to develop and manage the modelling work while keeping the focus on the downstream product and commercial decision.</p>
+
   <h2>What this demonstrates</h2>
   <ul>
     <li><b>Data Science / ML:</b> segmentation, recommendation systems and uplift modelling.</li>
