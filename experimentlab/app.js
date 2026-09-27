@@ -280,6 +280,10 @@ function syncMetricRowOptions(el,cols){
 }
 function refreshMetricPlanOptions(){
   const cols=metricColumnCandidates();
+  const allCols=rows.length?Object.keys(rows[0]):[];
+  const timeCols=allCols.filter(k=>/date|time|week|month|day|period/i.test(k));
+  const timeSelect=$("timeColumn");
+  if(timeSelect){const current=timeSelect.value||timeCols.find(k=>/^date$|date|time|week/i.test(k))||"";timeSelect.innerHTML=optionHtml(timeCols,current);timeSelect.value=current;}
   const primary=cols.find(k=>/conversion|activation|retention/i.test(k))||cols[0]||"";
   const p=document.querySelector("#metricRows .primary-metric-row");
   if(p){
