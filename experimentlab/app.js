@@ -154,7 +154,7 @@ function binaryTest(c,t){
 function planningKey(def,i){return String(i)+"|"+def.role+"|"+def.column;}
 function planningDefaults(def,i){
   const key=planningKey(def,i);
-  if(!planningState[key]) planningState[key]={mdeType:"relative",targetMde:5};
+  if(!planningState[key] || planningState[key].type!==def.type){ planningState[key]={mdeType:"relative",targetMde:5,type:def.type}; }
   const control=rows.filter(r=>Number(r.treatment)===0);
   if(def.type==="ratio"){
     const vals=control.map(r=>({n:num(r[def.column]),d:num(r[def.denominator])})).filter(x=>Number.isFinite(x.n)&&Number.isFinite(x.d)&&x.d>0);
@@ -227,7 +227,7 @@ function renderAnalysis(){
   $("treatmentValue").textContent=c.metric==="binary"?pct(res.treatment):fmt(res.treatment);
   const boot=c.metric==="ratio"?ratioBootstrap(controls,treats,c.reps):bootstrapDiff(controls,treats,c.reps);
   card("inference",[{l:"95% normal CI",v:c.metric==="binary"?fmt(res.lo*100)+" to "+fmt(res.hi*100)+" pp":fmt(res.lo)+" to "+fmt(res.hi),s:"normal approximation"},{l:"95% bootstrap CI",v:c.metric==="binary"?fmt(boot.lo*100)+" to "+fmt(boot.hi*100)+" pp":fmt(boot.lo)+" to "+fmt(boot.hi),s:c.reps+" resamples"},{l:"p-value",v:res.p.toFixed(4),s:"two-sided normal test"},{l:"Inference",v:res.p< c.alpha?"Evidence of non-zero effect":"Inconclusive at configured alpha",s:"not a ship/no-ship rule"}]);
-  cuped(c); segments(c); renderDecision(c,res,boot); powerMDE(); didModule(); staggeredModule(); syntheticModule(); tmleModule(); renderSequentialMonitoring();
+  cuped(c); segments(c); renderDecision(c,res,boot); powerMDE(); didModule(); staggeredModule(); syntheticModule(); tmleModule(); renderSequentialMonitoring(); renderExecutiveReadout();
   $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows · "+metricLabel(c)+".";
 }
 
@@ -337,9 +337,10 @@ function metricRoleForColumn(col){
   return "secondary";
 }
 function inferMetricType(col){
+  const name=String(col||"").toLowerCase();
+  if(/revenue|gmv|gross.?bookings|spend|amount|monetary|price|value/.test(name)) return "revenue";
   const values=rows.map(r=>num(r[col])).filter(Number.isFinite);
   if(values.length && values.every(v=>v===0||v===1)) return "binary";
-  if(/revenue|gmv|gross.?bookings|booking|spend|amount|value/.test(String(col).toLowerCase())) return "revenue";
   return "continuous";
 }
 function inferMetricDirection(col){
