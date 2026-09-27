@@ -4,8 +4,7 @@ permalink: /work/voucher-incrementality/
 title: Voucher Incrementality — Causal Inference
 ---
 <section class="case-page">
-  <a class="button primary back-home" href="/">← Back to home</a>
-  <div class="eyebrow">UBER · CAUSAL INFERENCE · INCREMENTALITY · VOUCHER PORTFOLIO</div>
+  <div class="case-header"><div class="eyebrow">UBER · CAUSAL INFERENCE · INCREMENTALITY · VOUCHER PORTFOLIO</div><a class="button primary back-home" href="/">← Back to home</a></div>
   <h1>Measuring the incremental value of vouchers</h1>
   <p class="case-lead">Separating genuine incremental business impact from activity that would have happened anyway.</p>
 
