@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /work/mcafee-personalisation/
 title: McAfee Personalisation & Recommendation Systems
 ---
 <section class="case-page">
