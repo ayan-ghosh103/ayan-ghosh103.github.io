@@ -4,8 +4,7 @@ permalink: /work/uberme-vouchers/
 title: UberMe Vouchers — Experimentation & Product Delivery
 ---
 <section class="case-page">
-  <a class="button primary back-home" href="/">← Back to home</a>
-  <div class="eyebrow">UBER · EXPERIMENTATION · PRODUCT · GLOBAL ROLLOUT</div>
+  <div class="case-header"><div class="eyebrow">UBER · EXPERIMENTATION · PRODUCT · GLOBAL ROLLOUT</div><a class="button primary back-home" href="/">← Back to home</a></div>
   <h1>UberMe Vouchers</h1>
   <p class="case-lead">Turning an ambiguous product opportunity into experiments, product decisions and a globally scalable rollout strategy.</p>
 
