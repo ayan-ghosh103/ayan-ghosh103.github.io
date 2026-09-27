@@ -1,69 +1,109 @@
 const $=id=>document.getElementById(id);
-let segments=[];
+let customers=[];let parsed={};
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-function seed(i){const x=Math.sin(i*12.9898)*43758.5453;return x-Math.floor(x)}
+function seed(i){const x=Math.sin(i*12.9898+78.233)*43758.5453;return x-Math.floor(x)}
 function normal(i){let u=Math.max(seed(i),1e-9),v=Math.max(seed(i+991),1e-9);return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
 function money(x){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(x)}
 function num(x){return new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(x)}
-
-function buildPopulation(){
- const n=1200; segments=[];
- for(let i=0;i<n;i++){
-   const z=normal(i), propensity=clamp(.08+.055*z+.025*Math.sin(i/31),.01,.45);
-   const uplift=clamp(.01+.055*(.5+.5*Math.sin(i/17))-.015*propensity+normal(i+17)*.012,-.04,.16);
-   segments.push({propensity,uplift});
+function percent(x){return (x*100).toFixed(1)+"%"}
+function extract(text){
+ const t=text.toLowerCase().replace(/,/g,"");
+ const get=(re)=>{const m=t.match(re);return m?Number(m[1]):null};
+ const population=get(/(?:have|serve|reach|population|customers|cases)[^0-9]{0,30}(\d+(?:\.\d+)?)[ ]*(?:k|m|million|thousand)?/);
+ const normalised=(v)=>v==null?null:(/k/.test(t.slice(Math.max(0,t.indexOf(String(v))-5),t.indexOf(String(v))+10))?v*1000:/m|million/.test(t.slice(Math.max(0,t.indexOf(String(v))-5),t.indexOf(String(v))+12))?v*1000000:v);
+ const costs=[get(/(?:costs?|cost|spend|price)[^$0-9]{0,15}\$?\s*(\d+(?:\.\d+)?)/),get(/\$\s*(\d+(?:\.\d+)?)[^a-z]{0,8}(?:offer|voucher|incentive)/)];
+ const value=get(/(?:worth|value|saves?|revenue)[^$0-9]{0,20}\$?\s*(\d+(?:\.\d+)?)/);
+ const budget=get(/(?:budget|available)[^$0-9]{0,20}\$?\s*(\d+(?:\.\d+)?)[ ]*(k|m|million|thousand)?/);
+ const cap=get(/(?:at most|max(?:imum)?|capacity)[^0-9]{0,20}(\d+(?:\.\d+)?)\s*%/);
+ const scenario=/support|case|agent|automation/.test(t)?"support":/retention|churn|save a customer/.test(t)?"retention":/voucher|incentive|offer|order/.test(t)?"voucher":"custom";
+ const objective=/roi|return/.test(t)?"roi":/revenue|value/.test(t)?"value":/conversion|order|save/.test(t)?"incremental":"value";
+ return {scenario,objective,population:normalised(population),cost:costs.find(x=>x!=null)||null,value,budget:budget==null?null:(/k|thousand/.test(t.slice(Math.max(0,t.indexOf(String(budget))-5),t.indexOf(String(budget))+15))?budget*1000:/m|million/.test(t.slice(Math.max(0,t.indexOf(String(budget))-5),t.indexOf(String(budget))+15))?budget*1000000:budget),capacity:cap};
+}
+function renderExtraction(){
+ const fields=[["Population",parsed.population?num(parsed.population):null],["Intervention cost",parsed.cost!=null?money(parsed.cost):null],["Outcome value",parsed.value!=null?money(parsed.value):null],["Budget",parsed.budget!=null?money(parsed.budget):null],["Capacity",parsed.capacity!=null?parsed.capacity+"%":null],["Scenario",parsed.scenario==="custom"?"Needs classification":parsed.scenario]];
+ const missing=fields.filter(x=>x[1]==null);
+ $("extractionStatus").innerHTML=parsed._has?'<span class="status-good">Brief parsed. Review the assumptions below.</span>':'<span class="status-warn">Waiting for a business brief…</span>';
+ $("extracted").innerHTML=parsed._has?fields.map(x=>'<div class="extract-row"><b>'+x[0]+'</b><strong>'+ (x[1]??"Missing") +'</strong></div>').join(""):"";
+ $("missing").innerHTML=fields.map(x=>'<div class="required '+(x[1]==null?"missing":"")+'"><b>'+x[0]+'</b><span>'+(x[1]==null?"Need this to calculate the policy":"Extracted from your brief")+'</span></div>').join("");
+ $("questions").innerHTML=parsed._has&&missing.length?'<div class="question"><b>Before I can calculate:</b> Please provide '+missing.map(x=>x[0].toLowerCase()).join(", ")+' in the controls below or add it to the brief.</div>':"";
+}
+function buildCustomers(){
+ customers=[];
+ for(let i=0;i<1400;i++){
+  const propensity=clamp(.05+.30*(.5+.5*Math.sin(i/37))+normal(i)*.055,.01,.65);
+  const uplift=clamp(.01+.09*(.5+.5*Math.sin(i/19+1.4))-.025*propensity+normal(i+41)*.012,-.05,.16);
+  const value=20+70*(.5+.5*Math.sin(i/53))+normal(i+10)*7;
+  customers.push({id:"C-"+String(i+1).padStart(5,"0"),propensity,uplift,value});
  }
 }
-function score(s,precision){
- const noise=Math.sqrt((100-precision)/100)*.075;
- return clamp(s.propensity+normal(Math.round(s.propensity*1e5)+Math.round(s.uplift*1e5)+33)*noise,.001,.6);
-}
-function evaluate(threshold,precision,capacity,cost,value){
- const scored=segments.map(s=>({...s,score:score(s,precision),net:s.uplift*value-cost}));
- const positive=scored.filter(s=>s.net>0).sort((a,b)=>b.net-a.net);
- const scoreCut=threshold/100;
- let candidates=scored.filter(s=>s.score>=scoreCut).sort((a,b)=>b.net-a.net);
- const max=Math.floor(scored.length*capacity/100);
+function evaluate(){
+ const pop=Number($("population").value)||100000,cost=Number($("cost").value)||0,value=Number($("value").value)||0,budget=Number($("budget").value)||0,cap=(Number($("capacity").value)||100)/100,threshold=Number($("threshold").value)/100,quality=Number($("quality").value)/100;
+ const noise=(1-quality)*.12;
+ const scored=customers.map((c,i)=>({...c,score:clamp(c.propensity+normal(i+88)*noise,.001,.8)}));
+ let candidates=scored.filter(c=>c.score>=threshold).map(c=>({...c,net:c.uplift*value-cost})).sort((a,b)=>b.net-a.net);
+ const maxByCap=Math.floor(scored.length*cap),maxByBudget=cost>0?Math.floor(budget/cost/(pop/scored.length)):maxByCap;
+ const max=Math.max(0,Math.min(maxByCap,maxByBudget));
  candidates=candidates.slice(0,max);
- const rate=candidates.length/scored.length;
- const scale=Number($("population").value)/scored.length;
- const inc=candidates.reduce((a,s)=>a+s.uplift,0)*scale;
- const gross=inc*value, spend=candidates.length*scale*cost, net=gross-spend;
- return {scored,candidates,rate,inc,gross,spend,net,roi:spend?net/spend:0,positiveShare:positive.length/scored.length};
+ const scale=pop/scored.length;
+ const inc=candidates.reduce((a,c)=>a+c.uplift,0)*scale;
+ const gross=inc*value,spend=candidates.length*scale*cost,net=gross-spend;
+ return {scored,candidates,inc,gross,spend,net,roi:spend?net/spend:0,scale};
 }
-function renderScatter(data){
- const el=$("scatter");el.innerHTML='<span class="axis-x">Propensity →</span><span class="axis-y">Incremental effect ↑</span>';
- data.scored.forEach((s,i)=>{const p=document.createElement("i");p.className="point";p.style.left=(s.score/.6*96+2)+"%";p.style.bottom=(clamp((s.uplift+.04)/.20,0,1)*92+3)+"%";el.appendChild(p)});
+function renderScatter(r){
+ const el=$("scatter");el.innerHTML='<span class="axis axis-x">Likelihood →</span><span class="axis axis-y">Incremental effect ↑</span>';
+ r.scored.forEach((c,i)=>{const p=document.createElement("i");p.className="point"+(r.candidates.some(x=>x.id===c.id)?" target":"");p.style.left=(c.score/.8*95+2)+"%";p.style.bottom=(clamp((c.uplift+.05)/.21,0,1)*91+4)+"%";el.appendChild(p)});
 }
-function renderBars(r){
- const max=Math.max(r.gross,r.spend,Math.abs(r.net),1);
- const rows=[["Incremental value",r.gross],["Intervention cost",r.spend],["Net value",r.net]];
- $("bars").innerHTML=rows.map(([label,v])=>'<div class="bar"><label>'+label+' · '+money(v)+'</label><div class="bar-track"><div class="bar-fill" style="width:'+clamp(Math.abs(v)/max*100,2,100)+'%"></div></div></div>').join("");
- $("economicsText").textContent='ROI '+(r.roi*100).toFixed(1)+'% · '+(r.rate*100).toFixed(1)+'% of the population targeted · '+(r.positiveShare*100).toFixed(1)+'% have positive simulated net value before capacity constraints.';
+function renderSensitivity(){
+ const base=Number($("cost").value),value=Number($("value").value),pop=Number($("population").value),budget=Number($("budget").value),cap=Number($("capacity").value),threshold=Number($("threshold").value),quality=Number($("quality").value);
+ const vals=[.5,.75,1,1.25,1.5,1.75,2].map(x=>base*x);
+ const old=Number($("cost").value);
+ const out=vals.map(v=>{ $("cost").value=v; const r=evaluate(); return {v,net:r.net}}); $("cost").value=old;
+ const max=Math.max(...out.map(x=>Math.abs(x.net)),1);
+ $("sensitivity").innerHTML=out.map(x=>'<div class="sens-col" title="Cost '+money(x.v)+'"><div class="sens-bar" style="height:'+Math.max(2,Math.abs(x.net)/max*88)+'%"></div><div class="sens-label">'+money(x.v).replace(".00","")+'</div></div>').join("");
 }
-function renderComparison(precision,cost,value,capacity){
- const thresholds=[25,40,55,70,85];
- const rows=thresholds.map(t=>{const r=evaluate(t,precision,capacity,cost,value);return {t,r}});
- $("comparison").innerHTML='<table><thead><tr><th>Threshold</th><th>Targeted</th><th>Incremental conversions</th><th>Incremental value</th><th>Spend</th><th>Net value</th><th>ROI</th></tr></thead><tbody>'+
- rows.map(x=>'<tr><td>'+x.t+'</td><td>'+num(x.r.rate*Number($("population").value))+'</td><td>'+num(x.r.inc)+'</td><td>'+money(x.r.gross)+'</td><td>'+money(x.r.spend)+'</td><td>'+money(x.r.net)+'</td><td>'+(x.r.roi*100).toFixed(1)+'%</td></tr>').join("")+'</tbody></table>';
+function renderComparison(r){
+ const pop=Number($("population").value),cost=Number($("cost").value),value=Number($("value").value),budget=Number($("budget").value),cap=Number($("capacity").value),quality=Number($("quality").value);
+ const policies=[["Target everyone",0],["Propensity",.35],["Uplift",null],["Economic policy",null]];
+ const rows=policies.map(([name,cut],idx)=>{
+  let selected;
+  if(idx===0) selected=r.scored.map(c=>({...c,net:c.uplift*value-cost})).sort((a,b)=>b.net-a.net).slice(0,Math.min(Math.floor(r.scored.length*cap),cost?Math.floor(budget/cost/(pop/r.scored.length)):999999));
+  else if(idx===1) selected=r.scored.sort((a,b)=>b.score-a.score).slice(0,Math.min(Math.floor(r.scored.length*cap),cost?Math.floor(budget/cost/(pop/r.scored.length)):999999));
+  else if(idx===2) selected=r.scored.sort((a,b)=>b.uplift-a.uplift).slice(0,Math.min(Math.floor(r.scored.length*cap),cost?Math.floor(budget/cost/(pop/r.scored.length)):999999));
+  else selected=r.candidates;
+  const inc=selected.reduce((a,c)=>a+c.uplift,0)*(pop/r.scored.length),gross=inc*value,sp=selected.length*(pop/r.scored.length)*cost,net=gross-sp;
+  return '<tr><td><b>'+name+'</b></td><td>'+num(selected.length*(pop/r.scored.length))+'</td><td>'+num(inc)+'</td><td>'+money(gross)+'</td><td>'+money(sp)+'</td><td>'+money(net)+'</td><td>'+percent(sp?net/sp:0)+'</td></tr>';
+ });
+ $("comparison").innerHTML='<table><thead><tr><th>Policy</th><th>Targeted</th><th>Incremental</th><th>Value</th><th>Spend</th><th>Net value</th><th>ROI</th></tr></thead><tbody>'+rows.join("")+'</tbody></table>';
+}
+function renderCustomers(r){
+ const filter=$("segment").value;
+ let rows=r.scored.filter(c=>filter==="all"||filter==="high"&&c.score>.45||filter==="incremental"&&c.uplift>.06||filter==="economic"&&(c.uplift*Number($("value").value)-Number($("cost").value)>0)).slice(0,18);
+ $("customersTable").innerHTML='<table><thead><tr><th>Customer</th><th>Likelihood</th><th>Incremental effect</th><th>Outcome value</th><th>Expected net value</th><th>Action</th></tr></thead><tbody>'+rows.map(c=>{const net=c.uplift*Number($("value").value)-Number($("cost").value);return '<tr><td>'+c.id+'</td><td>'+percent(c.score)+'</td><td>'+percent(c.uplift)+'</td><td>'+money(c.value)+'</td><td>'+money(net)+'</td><td><b>'+(r.candidates.some(x=>x.id===c.id)?"INTERVENE":"HOLD")+'</b></td></tr>'}).join("")+'</tbody></table>';
 }
 function recalc(){
- const threshold=Number($("threshold").value),precision=Number($("precision").value),capacity=Number($("capacity").value),cost=Number($("cost").value),value=Number($("value").value);
- $("thresholdOut").textContent=threshold;$("precisionOut").textContent=precision+"%";$("capacityOut").textContent=capacity+"%";
- const r=evaluate(threshold,precision,capacity,cost,value);
- $("eligible").textContent=num(r.rate*Number($("population").value));
- $("incremental").textContent=num(r.inc);
- $("incrementalValue").textContent=money(r.gross);
- $("netValue").textContent=money(r.net);
- const positive=r.net>0;
- $("policy").textContent=positive?"TARGET BY EXPECTED NET VALUE":"DO NOT INTERVENE";
- $("policyReason").textContent=positive
- ? "The selected policy produces positive simulated incremental value after intervention cost, subject to the capacity constraint."
- : "Under the current unit economics, the intervention cost exceeds simulated incremental value for the selected policy.";
- renderScatter(r);renderBars(r);renderComparison(precision,cost,value,capacity);
+ $("thresholdOut").textContent=$("threshold").value;$("qualityOut").textContent=$("quality").value+"%";
+ const r=evaluate(),positive=r.net>0;
+ $("targeted").textContent=num(r.candidates.length*r.scale);$("incremental").textContent=num(r.inc);$("gross").textContent=money(r.gross);$("spend").textContent=money(r.spend);$("net").textContent=money(r.net);
+ $("policy").textContent=positive?"TARGET BY EXPECTED ECONOMIC VALUE":"DO NOT INTERVENE";
+ $("badge").textContent=positive?"POSITIVE POLICY VALUE":"NEGATIVE POLICY VALUE";
+ $("policyReason").textContent=positive?"Ranks eligible customers by expected incremental value after intervention cost, then applies budget and capacity constraints.":"Under these economics, the intervention destroys expected value at the selected policy. Change cost, value or targeting assumptions to test the break-even point.";
+ $("economics").textContent="ROI "+percent(r.roi)+" · Budget used "+money(r.spend)+" / "+money(Number($("budget").value))+" · Capacity "+percent(r.candidates.length/r.scored.length)+" of population.";
+ renderScatter(r);renderSensitivity();renderComparison(r);renderCustomers(r);
 }
-function reset(){ $("population").value=100000;$("cost").value=2.10;$("value").value=18.40;$("threshold").value=55;$("precision").value=78;$("capacity").value=35;recalc()}
-["threshold","precision","capacity"].forEach(id=>$(id).addEventListener("input",recalc));
-["population","cost","value"].forEach(id=>$(id).addEventListener("change",recalc));
-$("recalculate").onclick=recalc;$("reset").onclick=reset;
-buildPopulation();recalc();
+function applyParsed(){
+ if(!parsed._has)return;
+ if(parsed.population)$("population").value=parsed.population;
+ if(parsed.cost!=null)$("cost").value=parsed.cost;
+ if(parsed.value!=null)$("value").value=parsed.value;
+ if(parsed.budget!=null)$("budget").value=parsed.budget;
+ if(parsed.capacity!=null)$("capacity").value=parsed.capacity;
+ if(parsed.scenario!=="custom")$("scenario").value=parsed.scenario;
+ recalc();renderExtraction();
+}
+$("briefInput").addEventListener("input",e=>{parsed=extract(e.target.value);parsed._has=e.target.value.trim().length>10;renderExtraction()});
+document.querySelectorAll("[data-example]").forEach(b=>b.onclick=()=>{$("briefInput").value=b.dataset.example;parsed=extract(b.dataset.example);parsed._has=true;renderExtraction();applyParsed()});
+$("applyBrief").onclick=applyParsed;$("recalculate").onclick=recalc;$("reset").onclick=()=>{ $("briefInput").value="";parsed={};$("population").value=100000;$("cost").value=4;$("value").value=60;$("budget").value=150000;$("capacity").value=30;$("threshold").value=45;$("quality").value=82;renderExtraction();recalc()};
+["threshold","quality"].forEach(id=>$(id).addEventListener("input",recalc));
+["population","cost","value","budget","capacity"].forEach(id=>$(id).addEventListener("change",recalc));
+$("segment").addEventListener("change",recalc);
+buildCustomers();renderExtraction();recalc();
