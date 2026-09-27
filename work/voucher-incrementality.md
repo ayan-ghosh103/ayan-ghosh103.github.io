@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /work/voucher-incrementality/
 title: Voucher Incrementality — Causal Inference
 ---
 <section class="case-page">
