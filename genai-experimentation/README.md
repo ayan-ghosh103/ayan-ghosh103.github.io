@@ -8,6 +8,22 @@ A flagship portfolio project demonstrating how I would evaluate a GenAI product 
 
 The example product is an **AI Customer Support Assistant**. The demo is intentionally synthetic and deterministic so it can run on GitHub Pages without exposing an API key.
 
+
+
+## Agentic architecture
+
+The platform has an explicit agent layer rather than a single chatbot. A lightweight orchestrator decomposes the business question and delegates to specialized agents:
+
+1. **Product Agent** — runs the AI customer-support workflow: retrieval, tool use, response generation, citation verification and escalation.
+2. **Evaluation Agent** — evaluates product traces, calibrates the LLM judge against human labels and routes disagreements into error analysis.
+3. **Experiment Agent** — converts a business brief into estimands, metrics, treatment design, rollout and monitoring requirements.
+4. **Causal Agent** — diagnoses identification assumptions and selects an appropriate causal workflow rather than blindly applying an estimator.
+5. **Causal ML Agent** — estimates heterogeneous treatment effects and evaluates policies out of sample.
+6. **Policy Agent** — combines causal value, AI operating cost and rollout constraints into an auditable routing policy.
+7. **Orchestrator** — coordinates the workflow and enforces tool / policy boundaries.
+
+Every agent emits a structured trace containing agent version, model, tool calls, inputs/outputs, latency, token usage, cost, confidence and validation status. This makes agent execution observable and makes traces usable as data for reliability and product experimentation.
+
 ## System layers
 
 1. **GenAI product** — FastAPI, retrieval, vector index, LLM, prompt/version registry and structured traces.
@@ -55,10 +71,10 @@ A constrained routing policy can then solve for the eligible set subject to traf
 ## Production architecture
 
 ```
-                    FastAPI / AI PRODUCT
+                    ORCHESTRATOR / AGENT CONTROL PLANE
                             |
                  +----------v----------+
-                 | RAG / Agent + Trace |
+                 | Specialized Agents + Trace |
                  +----------+----------+
                             |
                  +----------v----------+
@@ -98,3 +114,25 @@ The important engineering boundary is preserved:
 **application trace → evaluation → experiment → causal estimate → economics → policy**
 
 No real company/customer data is included.
+
+## Agent trace contract
+
+    {
+      "run_id": "demo-run-001",
+      "agent": "causal_analyst",
+      "agent_version": "portfolio-agent-v1",
+      "model": "provider-agnostic",
+      "inputs": ["experiment_id", "estimand"],
+      "tool_calls": [
+        {"tool": "pretrend_check", "status": "ok"},
+        {"tool": "did_estimator", "status": "ok"}
+      ],
+      "output": {"incremental_revenue": 1540000},
+      "latency_ms": 1260,
+      "input_tokens": 620,
+      "output_tokens": 350,
+      "estimated_cost_usd": 0.018,
+      "validation_status": "validated"
+    }
+
+The portfolio demo renders deterministic traces, while the FastAPI reference service exposes the same contracts so a real model provider, vector store, evaluator and experiment warehouse can be attached without redesigning the interface.
