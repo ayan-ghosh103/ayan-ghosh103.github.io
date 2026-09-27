@@ -29,20 +29,34 @@ function demo(){
   const r=[]; for(let i=0;i<1600;i++){const t=i%2, pre=80+Math.random()*40, conv=(Math.random()<(.12+(t?.035:0))?1:0), gb=Math.max(0,(t?52:47)+pre*.45+(Math.random()-.5)*35);r.push({treatment:t,conversion:conv,gross_bookings:gb,pre_metric:pre,country:["UK","US","DE","IN"][i%4]});} return r;
 }
 function getConfig(){
-  return {metric:$("metric").value, metricColumn:$("metricColumn").value.trim()||($("metric").value==="binary"?"conversion":"gross_bookings"), pre:$("preColumn").value.trim(), expected:Number($("allocation").value)/100, alpha:Number($("alpha").value), power:Number($("power").value), mde:Number($("mde").value)/100, reps:Number($("bootstrap").value)};
+  return {metric:$("metric").value, metricColumn:$("metricColumn").value.trim()||($("metric").value==="binary"?"conversion":"gross_bookings"), denominator:$("denominatorColumn")?.value.trim()||"denominator", pre:$("preColumn").value.trim(), expected:Number($("allocation").value)/100, alpha:Number($("alpha").value), power:Number($("power").value), mde:Number($("mde").value)/100, reps:Number($("bootstrap").value)};
 }
-function metricLabel(c){return c.metric==="binary"?"Conversion rate":c.metric==="continuous"?"Average "+(c.metricColumn||"metric"):"Average "+(c.metricColumn||"revenue");}
+function metricLabel(c){return c.metric==="binary"?"Conversion rate":c.metric==="ratio"?"Ratio "+c.metricColumn+" / "+c.denominator:c.metric==="continuous"?"Average "+(c.metricColumn||"metric"):"Average "+(c.metricColumn||"revenue");}
 function validate(){
   const c=getConfig(); if(!rows.length)return "Load data first.";
   if(!rows.every(r=>[0,1].includes(Number(r.treatment))))return "treatment must be coded 0/1.";
   const vals=rows.map(r=>num(r[c.metricColumn])); if(vals.some(Number.isNaN))return "Metric column contains missing or non-numeric values.";
   if(c.metric==="binary" && vals.some(v=>![0,1].includes(v)))return "Binary metrics must contain only 0/1.";
+  if(c.metric==="ratio" && rows.some(r=>Number.isNaN(num(r[c.denominator]))||num(r[c.denominator])<=0))return "Ratio metrics require a positive numeric denominator column.";
   if(c.pre && rows.some(r=>Number.isNaN(num(r[c.pre]))))return "Pre-period metric contains missing or non-numeric values.";
   return "";
 }
 
 function bootstrapDiff(c,t,reps){
   const out=[]; for(let b=0;b<reps;b++){let cm=0,tm=0;for(let i=0;i<c.length;i++)cm+=c[Math.floor(Math.random()*c.length)];for(let i=0;i<t.length;i++)tm+=t[Math.floor(Math.random()*t.length)];out.push(tm/t.length-cm/c.length);} out.sort((a,b)=>a-b);return {lo:out[Math.floor(reps*.025)],hi:out[Math.floor(reps*.975)],se:sd(out)};
+}
+function ratioTest(c,t,den){
+  const cn=c.reduce((s,i)=>s+i.n,0), cd=c.reduce((s,i)=>s+i.d,0), tn=t.reduce((s,i)=>s+i.n,0), td=t.reduce((s,i)=>s+i.d,0);
+  const cr=cn/cd,tr=tn/td,diff=tr-cr;
+  const varC=c.reduce((s,i)=>s+(i.n-cr*i.d)**2,0)/(cd*cd);
+  const varT=t.reduce((s,i)=>s+(i.n-tr*i.d)**2,0)/(td*td);
+  const se=Math.sqrt(varC/c.length+varT/t.length),z=se?diff/se:0,p=2*(1-normalCDF(Math.abs(z))),ci=1.96*se;
+  return {control:cr,treatment:tr,diff,lift:cr?diff/cr:NaN,se,p,lo:diff-ci,hi:diff+ci};
+}
+function ratioBootstrap(c,t,reps){
+  const out=[];
+  for(let b=0;b<reps;b++){let cn=0,cd=0,tn=0,td=0;for(let i=0;i<c.length;i++){const x=c[Math.floor(Math.random()*c.length)];cn+=x.n;cd+=x.d}for(let i=0;i<t.length;i++){const x=t[Math.floor(Math.random()*t.length)];tn+=x.n;td+=x.d}out.push(tn/td-cn/cd)}
+  out.sort((a,b)=>a-b);return {lo:out[Math.floor(reps*.025)],hi:out[Math.floor(reps*.975)],se:sd(out)};
 }
 function continuousTest(c,t){
   const cm=mean(c),tm=mean(t),diff=tm-cm, se=Math.sqrt(variance(c)/c.length+variance(t)/t.length), z=se?diff/se:0, p=2*(1-normalCDF(Math.abs(z))), ci=1.96*se;
@@ -67,17 +81,19 @@ function powerMDE(){
 
 function renderAnalysis(){
   const err=validate(); if(err){$("status").textContent=err;return;}
-  const c=getConfig(), controls=rows.filter(r=>Number(r.treatment)===0).map(r=>num(r[c.metricColumn])), treats=rows.filter(r=>Number(r.treatment)===1).map(r=>num(r[c.metricColumn]));
-  const res=c.metric==="binary"?binaryTest(controls,treats):continuousTest(controls,treats); lastResult={config:c,res,controls,treats};
+  const c=getConfig(), controlRows=rows.filter(r=>Number(r.treatment)===0), treatmentRows=rows.filter(r=>Number(r.treatment)===1);
+  const controls=c.metric==="ratio"?controlRows.map(r=>({n:num(r[c.metricColumn]),d:num(r[c.denominator])})):controlRows.map(r=>num(r[c.metricColumn]));
+  const treats=c.metric==="ratio"?treatmentRows.map(r=>({n:num(r[c.metricColumn]),d:num(r[c.denominator])})):treatmentRows.map(r=>num(r[c.metricColumn]));
+  const res=c.metric==="binary"?binaryTest(controls,treats):c.metric==="ratio"?ratioTest(controls,treats,c.denominator):continuousTest(controls,treats); lastResult={config:c,res,controls,treats};
   const expected=rows.length*c.expected, imbalance=Math.abs(treats.length-expected)/expected;
   card("health",[{l:"Control N",v:controls.length.toLocaleString(),s:"users/units"},{l:"Treatment N",v:treats.length.toLocaleString(),s:"users/units"},{l:"Allocation",v:pct(treats.length/rows.length,1),s:"treatment share"},{l:"SRM",v:imbalance>.1?"Review":"Pass",s:imbalance>.1?"allocation differs from expected":"allocation within 10% of expected"}]);
-  const unit=c.metric==="binary"?"rate":(c.metricColumn||"metric");
+  const unit=c.metric==="binary"?"rate":c.metric==="ratio"?"ratio":(c.metricColumn||"metric");
   card("effect",[{l:"Control",v:c.metric==="binary"?pct(res.control):fmt(res.control),s:unit+" baseline"},{l:"Treatment",v:c.metric==="binary"?pct(res.treatment):fmt(res.treatment),s:unit+" observed"},{l:"Absolute effect",v:c.metric==="binary"?fmt(res.diff*100)+" pp":fmt(res.diff),s:"treatment − control"},{l:"Relative lift",v:pct(res.lift,1),s:"relative to control"}]);
   $("controlBar").style.width=(c.metric==="binary"?Math.max(0,res.control*100):Math.max(0,Math.min(100,res.control/(Math.max(res.control,res.treatment)||1)*100)))+"%";
   $("treatmentBar").style.width=(c.metric==="binary"?Math.max(0,res.treatment*100):Math.max(0,Math.min(100,res.treatment/(Math.max(res.control,res.treatment)||1)*100)))+"%";
   $("controlValue").textContent=c.metric==="binary"?pct(res.control):fmt(res.control);
   $("treatmentValue").textContent=c.metric==="binary"?pct(res.treatment):fmt(res.treatment);
-  const boot=bootstrapDiff(controls,treats,c.reps);
+  const boot=c.metric==="ratio"?ratioBootstrap(controls,treats,c.reps):bootstrapDiff(controls,treats,c.reps);
   card("inference",[{l:"95% normal CI",v:c.metric==="binary"?fmt(res.lo*100)+" to "+fmt(res.hi*100)+" pp":fmt(res.lo)+" to "+fmt(res.hi),s:"normal approximation"},{l:"95% bootstrap CI",v:c.metric==="binary"?fmt(boot.lo*100)+" to "+fmt(boot.hi*100)+" pp":fmt(boot.lo)+" to "+fmt(boot.hi),s:c.reps+" resamples"},{l:"p-value",v:res.p.toFixed(4),s:"two-sided normal test"},{l:"Inference",v:res.p< c.alpha?"Evidence of non-zero effect":"Inconclusive at configured alpha",s:"not a ship/no-ship rule"}]);
   cuped(c); segments(c); renderDecision(c,res,boot); powerMDE(); didModule(); staggeredModule(); syntheticModule(); tmleModule(); renderSequentialMonitoring();
   $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows · "+metricLabel(c)+".";
@@ -128,7 +144,7 @@ function printPDF(){window.print();}
 
 function load(data,name){rows=data; $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows"+(name?" · "+name:"")+"."; renderAnalysis();}
 $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";$("baseline").value=b?"10":"50";$("baselineSd").disabled=b;$("baselineSd").value=b?"":"20";renderAnalysis();});
-["metricColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
+["metricColumn","denominatorColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
 $("file").addEventListener("change",e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f);}});
 $("loadDemo").onclick=()=>load(demo(),"demo-experiment.csv");
 $("dropzone").addEventListener("dragover",e=>e.preventDefault());$("dropzone").addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f);}});
