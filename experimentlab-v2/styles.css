@@ -2,3 +2,11 @@
 .timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:28px 0}.timeline-step{position:relative;padding:18px 14px;border-top:2px solid #303944;color:#7f8b98}.timeline-step:before{content:"";position:absolute;left:0;top:-7px;width:12px;height:12px;border-radius:50%;background:#303944}.timeline-step.done{color:#f2f5f7;border-color:#b9f36b}.timeline-step.done:before{background:#b9f36b}.timeline-step b{display:block;color:#b9f36b;font-size:11px}.timeline-step span{display:block;margin-top:5px;font-weight:700}@media(max-width:760px){.timeline{grid-template-columns:1fr 1fr}}
 
 .actions button{position:relative;z-index:100;pointer-events:auto!important;touch-action:manipulation}.actions a{position:relative;z-index:100;pointer-events:auto!important}.actions{position:relative;z-index:100}
+
+.metric-row{border:1px solid var(--line);border-radius:14px;padding:16px;margin:10px 0;background:var(--surface)}
+.metric-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.metric-role-label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.metric-role-note{font-size:12px;color:var(--muted)}
+.metric-grid{margin:0}
+.metric-remove{font-size:12px;padding:5px 9px}
+.metric-actions{margin-top:10px}
