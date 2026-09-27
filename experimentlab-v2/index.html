@@ -53,4 +53,49 @@
   });
   bind("printPDF2",function(){window.print();});
 })();
+</script><script>
+(function(){
+  function demoRows(){
+    const r=[];
+    for(let i=0;i<1600;i++){
+      const treatment=i%2, pre=80+Math.random()*40;
+      const conversion=Math.random()<(treatment?0.155:0.12)?1:0;
+      const gross_bookings=Math.max(0,(treatment?52:47)+pre*.45+(Math.random()-.5)*35);
+      r.push({treatment,conversion,gross_bookings,pre_metric:pre,country:["UK","US","DE","IN"][i%4]});
+    }
+    return r;
+  }
+  function csv(rows){
+    const keys=Object.keys(rows[0]);
+    return [keys.join(","),...rows.map(r=>keys.map(k=>r[k]).join(","))].join("\n");
+  }
+  function directDemo(){
+    const rows=demoRows();
+    const status=document.getElementById("status");
+    if(status) status.textContent="Demo data ready · "+rows.length.toLocaleString()+" rows · click Run analysis controls below.";
+    const profile=document.getElementById("datasetProfile");
+    if(profile) profile.innerHTML='<div class="card"><small>Rows</small><strong>'+rows.length.toLocaleString()+'</strong><span>demo records</span></div><div class="card"><small>Experiment group</small><strong>treatment</strong><span>0 / 1</span></div><div class="card"><small>Outcome</small><strong>conversion</strong><span>binary metric</span></div>';
+    if(window.load) try{window.load(rows,"demo-experiment.csv");}catch(e){console.error(e);}
+  }
+  function directReport(){
+    const main=document.querySelector("main");
+    if(!main)return;
+    const html='<!doctype html><html><head><meta charset="utf-8"><title>ExperimentLab Report</title><style>body{font:14px Arial;max-width:1000px;margin:40px auto;line-height:1.5}section{margin:30px 0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}</style></head><body><h1>ExperimentLab Report</h1>'+main.innerHTML+'</body></html>';
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([html],{type:"text/html"}));
+    a.download="experimentlab-report.html";
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  function bind(id,fn){
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener("click",fn);
+  }
+  bind("loadDemo",function(e){e.preventDefault();directDemo();});
+  bind("downloadHTML",function(e){e.preventDefault();directReport();});
+  bind("printPDF",function(e){e.preventDefault();window.print();});
+  bind("downloadHTML2",function(e){e.preventDefault();directReport();});
+  bind("printPDF2",function(e){e.preventDefault();window.print();});
+})();
 </script></body></html>
