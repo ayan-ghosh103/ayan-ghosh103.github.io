@@ -521,6 +521,11 @@ $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";
 ["metricColumn","denominatorColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
 
 $("loadDemo").onclick=()=>load(scenarioData($("scenario")?.value||"conversion"),"demo-experiment.csv");
+$("calculateExperiment")?.addEventListener("click",()=>{
+  renderAnalysis();
+  $("status").textContent="Analysis recalculated using the current metric configuration and directions.";
+  $("analysis")?.scrollIntoView({behavior:"smooth",block:"start"});
+});
 $("downloadHTML").onclick=downloadHTML;
 $("printPDF").onclick=printPDF;
 if($("runPower")) $("runPower").onclick=powerMDE;
