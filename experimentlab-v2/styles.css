@@ -12,3 +12,17 @@
 .metric-actions{margin-top:10px}
 
 .evidence-summary{border:1px solid var(--line);border-radius:14px;overflow:hidden}.evidence-intro{padding:14px 16px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line)}.evidence-row{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line)}.evidence-row:last-child{border-bottom:0}.evidence-row small{display:block;color:var(--muted);margin-top:3px}.evidence-row b{font-size:13px}.evidence-row .favorable{color:#8ed34f}.evidence-row .unfavorable{color:#ff7b7b}.evidence-row .neutral{color:var(--muted)}
+
+/* Multi-metric planning + prominent recalculation action */
+.calculate-row{display:flex;align-items:center;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid #e6eaee;flex-wrap:wrap}
+.calculate-row .calculate-btn{background:#16803a;color:#fff;border-color:#16803a;font-weight:700;padding:11px 18px}
+.calculate-row .calculate-btn:hover{background:#126b30}
+.calculate-row span{font-size:.86rem;color:#68737d}
+.planning-card{border:1px solid #e3e7eb;border-radius:10px;padding:18px;margin:14px 0;background:#fff}
+.planning-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+.planning-head h3{margin:4px 0 2px;font-size:1.05rem}
+.planning-head small{color:#68737d}
+.planning-head>strong{font-size:.9rem;white-space:nowrap}
+.planning-grid{margin-bottom:14px}
+.planning-results{margin-top:8px}
+@media(max-width:700px){.planning-head{flex-direction:column}.calculate-row{align-items:flex-start;flex-direction:column}.calculate-row .calculate-btn{width:100%}}
