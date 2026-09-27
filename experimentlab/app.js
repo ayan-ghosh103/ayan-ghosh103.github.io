@@ -530,6 +530,117 @@ if(csvDrop){
 $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";$("baseline").value=b?"10":"50";$("baselineSd").disabled=b;$("baselineSd").value=b?"":"20";renderAnalysis();});
 ["metricColumn","denominatorColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
 
+
+/* Statistical self-validation: deterministic fixtures with known ground truth. */
+function validationRng(seed){
+  let s=seed>>>0;
+  return ()=>{s=(1664525*s+1013904223)>>>0;return s/4294967296;};
+}
+function validationBinary(n,p,rng){
+  const a=[]; for(let i=0;i<n;i++) a.push(rng()<p?1:0); return a;
+}
+function validationCheck(ok,label,detail){
+  return {ok:!!ok,label,detail};
+}
+function runValidationSuite(){
+  const rng=validationRng(20260927);
+  const checks=[];
+
+  // 1) Known-answer recovery: exact 10% vs 12% binary conversion.
+  const controlKnown=Array(10000).fill(0).map((_,i)=>i<1000?1:0);
+  const treatmentKnown=Array(10000).fill(0).map((_,i)=>i<1200?1:0);
+  const known=binaryTest(controlKnown,treatmentKnown);
+  checks.push(validationCheck(
+    Math.abs(known.control-.10)<1e-12 && Math.abs(known.treatment-.12)<1e-12 &&
+    Math.abs(known.diff-.02)<1e-12 && Math.abs(known.lift-.20)<1e-12,
+    "Known-effect recovery",
+    "Recovered 10.00% → 12.00% and +20.00% relative lift."
+  ));
+
+  // 2) A/A false-positive calibration. 500 deterministic trials at alpha=.05.
+  let falsePos=0, aaTrials=500;
+  for(let i=0;i<aaTrials;i++){
+    const c=validationBinary(1000,.10,rng), t=validationBinary(1000,.10,rng);
+    if(binaryTest(c,t).p<.05) falsePos++;
+  }
+  const fpr=falsePos/aaTrials;
+  checks.push(validationCheck(
+    fpr>=.025 && fpr<=.075,
+    "A/A false-positive rate",
+    (fpr*100).toFixed(1)+"% across "+aaTrials+" deterministic A/A trials; expected approximately 5%."
+  ));
+
+  // 3) Confidence interval coverage under the null: 300 A/A intervals.
+  let covered=0, coverageTrials=300;
+  for(let i=0;i<coverageTrials;i++){
+    const c=validationBinary(1000,.10,rng), t=validationBinary(1000,.10,rng), r=binaryTest(c,t);
+    if(r.lo<=0 && r.hi>=0) covered++;
+  }
+  const coverage=covered/coverageTrials;
+  checks.push(validationCheck(
+    coverage>=.90 && coverage<=.99,
+    "95% CI coverage",
+    (coverage*100).toFixed(1)+"% of "+coverageTrials+" null intervals contained the true effect of 0."
+  ));
+
+  // 4) Direction semantics used by the readout.
+  const up={direction:"up"}, down={direction:"down"};
+  const directionPass =
+    metricDirectionStatus(up,{diff:.05})==="Favorable" &&
+    metricDirectionStatus(up,{diff:-.05})==="Unfavorable" &&
+    metricDirectionStatus(down,{diff:-.05})==="Favorable" &&
+    metricDirectionStatus(down,{diff:.05})==="Unfavorable";
+  checks.push(validationCheck(
+    directionPass,
+    "Metric direction logic",
+    "Higher-is-better and lower-is-better effects map to the expected readout status."
+  ));
+
+  // 5) Ratio estimator: known aggregated numerator / denominator.
+  const ratioC=[{n:100,d:1000},{n:100,d:1000}], ratioT=[{n:120,d:1000},{n:120,d:1000}];
+  const ratio=ratioTest(ratioC,ratioT,"denominator");
+  checks.push(validationCheck(
+    Math.abs(ratio.control-.10)<1e-12 &&
+    Math.abs(ratio.treatment-.12)<1e-12 &&
+    Math.abs(ratio.diff-.02)<1e-12,
+    "Ratio metric calculation",
+    "Recovered 100/1000 → 120/1000 and a +0.020 ratio-point effect."
+  ));
+
+  // 6) Input guards: invalid binary values and zero denominators must be rejected.
+  const originalRows=rows, originalMetric=$( "metric" )?.value, originalColumn=$( "metricColumn" )?.value, originalDen=$( "denominatorColumn" )?.value;
+  let invalidBinaryRejected=false, zeroDenRejected=false;
+  if($("metric")&&$("metricColumn")){
+    $("metric").value="binary"; $("metricColumn").value="conversion";
+    rows=[{treatment:0,conversion:0},{treatment:1,conversion:2}];
+    invalidBinaryRejected=validate().includes("Binary metrics");
+    $("metric").value="ratio"; $("metricColumn").value="numerator"; $("denominatorColumn").value="denominator";
+    rows=[{treatment:0,numerator:1,denominator:0},{treatment:1,numerator:2,denominator:1}];
+    zeroDenRejected=validate().includes("positive numeric denominator");
+    rows=originalRows;
+    $("metric").value=originalMetric;
+    $("metricColumn").value=originalColumn;
+    $("denominatorColumn").value=originalDen;
+  }
+  checks.push(validationCheck(
+    invalidBinaryRejected && zeroDenRejected,
+    "Input and edge-case guards",
+    "Invalid binary outcomes and non-positive ratio denominators are rejected instead of silently analysed."
+  ));
+
+  const passed=checks.filter(x=>x.ok).length, total=checks.length;
+  if($("validationResults")){
+    $("validationResults").innerHTML=checks.map(x=>'<div class="card"><small>'+escapeHtml(x.ok?"PASS":"REVIEW")+'</small><strong>'+escapeHtml(x.label)+'</strong><span>'+escapeHtml(x.detail)+'</span></div>').join("");
+  }
+  if($("validationDetails")){
+    const allPass=passed===total;
+    $("validationDetails").innerHTML='<strong>'+passed+'/'+total+' validation checks passed.</strong> '+(allPass
+      ?"The core A/B calculation path is behaving consistently against these deterministic fixtures."
+      :"One or more checks need review before treating the implementation as fully validated.")+
+      '<p class="muted">These checks validate implementation behavior; they are not a substitute for independent statistical review or production-scale test coverage.</p>';
+  }
+}
+
 $("loadDemo").onclick=()=>load(scenarioData($("scenario")?.value||"conversion"),"demo-experiment.csv");
 $("calculateExperiment")?.addEventListener("click",()=>{
   syncPrimaryMetricToAnalysis();
@@ -537,6 +648,7 @@ $("calculateExperiment")?.addEventListener("click",()=>{
   $("status").textContent="Analysis recalculated using the current metric configuration and directions.";
   $("analysis")?.scrollIntoView({behavior:"smooth",block:"start"});
 });
+$("runValidation")?.addEventListener("click",runValidationSuite);
 $("downloadHTML").onclick=downloadHTML;
 $("printPDF").onclick=printPDF;
 if($("runPower")) $("runPower").onclick=powerMDE;
