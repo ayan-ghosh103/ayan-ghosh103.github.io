@@ -11,9 +11,16 @@ const sd = a => Math.sqrt(variance(a));
 
 function erf(x){const s=x<0?-1:1;x=Math.abs(x);const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911,t=1/(1+p*x);return s*(1-(((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-x*x)));}
 function normalCDF(x){return .5*(1+erf(x/Math.SQRT2));}
-function normalInv(p){let a=[-39.6968302866538,220.946098424521,-275.928510446969,138.357751867269,-30.6647980661472,2.50662827745924],b=[-54.4760987982241,161.585836858041,-155.698979859887,66.8013118877197,-13.2806815528857],c=[-.00778489400243029,-.322396458041136,-2.40075827716184,-2.54973253934373,4.37466414146497,2.93816398269878],d=[.00778469570904146,.32246712907004,2.445134137143,3.75440866190742],q=p-.5;
-if(p<=0)return-Infinity;if(p>=1)return Infinity;if(Math.abs(q)<.425){let r=.180625-q*q;return q*(((((a[5]*r+a[4])*r+a[3])*r+a[2])*r+a[1])*r+a[0])/(((((b[5]*r+b[4])*r+b[3])*r+b[2])*r+b[1])*r+1));}
-let r=q<0?p:1-p;r=Math.sqrt(-Math.log(r));return (q<0?-1:1)*(((((c[5]*r+c[4])*r+c[3])*r+c[2])*r+c[1])*r+c[0])/((((d[3]*r+d[2])*r+d[1])*r+d[0])*r+1));}
+function normalInv(p){
+  if(p<=0)return -Infinity;
+  if(p>=1)return Infinity;
+  let lo=-8,hi=8;
+  for(let i=0;i<80;i++){
+    const mid=(lo+hi)/2;
+    if(normalCDF(mid)<p)lo=mid;else hi=mid;
+  }
+  return (lo+hi)/2;
+}
 
 function card(id,items){$(id).innerHTML=items.map(x=>'<div class="card"><small>'+x.l+'</small><strong>'+x.v+'</strong><span>'+x.s+'</span></div>').join('');}
 function escapeHtml(s){return String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
