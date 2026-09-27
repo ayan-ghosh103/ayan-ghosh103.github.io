@@ -31,6 +31,11 @@ title: Voucher Incrementality — Causal Inference
   <div class="impact"><b>25–36%</b> incremental Trips · <b>40–52%</b> incremental Gross Bookings</div>
   <p>The findings informed investment decisions, prioritisation and subsequent voucher initiatives across the portfolio.</p>
 
+
+  <h2>Why incrementality mattered</h2>
+  <p>Voucher performance can look strong in descriptive reporting even when a portion of the observed activity would have occurred without the intervention. Measuring incrementality therefore changes the decision from “how much activity did vouchers generate?” to “how much additional activity did vouchers cause?”</p>
+  <p>The answer was used as decision support for voucher investment and prioritisation, making the causal estimate more useful than a simple before-and-after comparison.</p>
+
   <h2>What this demonstrates</h2>
   <ul>
     <li><b>Experimentation & causal inference:</b> matching methodology to treatment structure and assumptions.</li>
