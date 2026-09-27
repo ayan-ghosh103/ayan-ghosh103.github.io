@@ -25,6 +25,67 @@ function parseCSV(text){
   return lines.map(line=>{const v=parseLine(line);return Object.fromEntries(head.map((h,i)=>[h,v[i]??""]));}).filter(r=>r.treatment!==""&&r.treatment!==undefined);
 }
 
+function inferDataset(rawRows){
+  if(!rawRows.length) return {rows:rawRows, message:"No rows detected."};
+  const cols=Object.keys(rawRows[0]);
+  const numericCols=cols.filter(k=>rawRows.some(r=>r[k]!==""&&Number.isFinite(Number(r[k]))));
+  const unique=k=>[...new Set(rawRows.map(r=>String(r[k]??"")).filter(Boolean))];
+  const binaryCols=numericCols.filter(k=>{const u=[...new Set(rawRows.map(r=>Number(r[k])).filter(Number.isFinite))];return u.length===2&&u.every(v=>v===0||v===1);});
+  const idCol=cols.find(k=>/^id$|_id$|user.?id|customer.?id/i.test(k));
+  const groupCol=cols.find(k=>/^(group|variant|arm|treatment|experiment.?group|bucket)$/i.test(k))||cols.find(k=>{const u=unique(k);return u.length===2&&u.every(v=>/control|treatment|test|variant|holdout/i.test(v));});
+  let out=rawRows.map(r=>({...r}));
+  let treatmentCol=null;
+  if(groupCol){
+    const vals=unique(groupCol), control=vals.find(v=>/control|holdout|baseline/i.test(v))||vals[0], treatment=vals.find(v=>/treatment|test|variant/i.test(v)&&v!==control)||vals.find(v=>v!==control);
+    out=out.map(r=>({...r,treatment:String(r[groupCol])===String(treatment)?1:0}));
+    treatmentCol=groupCol;
+  } else if(binaryCols.length){
+    treatmentCol=binaryCols.find(k=>/treat|variant|group|arm|assign/i.test(k))||binaryCols[0];
+    out=out.map(r=>({...r,treatment:Number(r[treatmentCol])}));
+  }
+  const preCol=cols.find(k=>/^pre[_ -]?|pre.?period|baseline/i.test(k));
+  const postCol=cols.find(k=>/^post[_ -]?|outcome|after/i.test(k));
+  const timeCol=cols.find(k=>/date|time|week|month|day|period/i.test(k));
+  const denominator=cols.find(k=>/denominator|denom|exposure|users|impressions/i.test(k));
+  const numerator=cols.find(k=>/numerator|num|orders|bookings|conversions/i.test(k));
+  const ratioPossible=!!denominator&&!!numerator&&numericCols.includes(denominator)&&numericCols.includes(numerator);
+  const outcomeCandidates=numericCols.filter(k=>k!==treatmentCol&&k!==denominator&&k!==numerator);
+  const metricCol=binaryCols.find(k=>k!==treatmentCol)||outcomeCandidates.find(k=>/conversion|convert|revenue|booking|gmv|gross|outcome|metric/i.test(k))||outcomeCandidates[0];
+  let metric="continuous";
+  if(ratioPossible) metric="ratio";
+  else if(metricCol&&binaryCols.includes(metricCol)) metric="binary";
+  else if(metricCol&&/revenue/i.test(metricCol)) metric="revenue";
+  if(treatmentCol){
+    $("metric").value=metric;
+    $("metricColumn").value=metric==="ratio"?numerator:(metricCol||"");
+    $("denominatorColumn").value=denominator||"denominator";
+    $("preColumn").value=preCol||"";
+    if($("didPre")) $("didPre").value=preCol||"";
+    if($("didPost")) $("didPost").value=postCol||"";
+    if($("timeColumn")) $("timeColumn").value=timeCol||"";
+    if($("cohortColumn")) $("cohortColumn").value=cols.find(k=>/cohort|treatment.?week|first.?treat/i.test(k))||"";
+    if($("unitColumn")) $("unitColumn").value=cols.find(k=>/geo|city|region|country|unit/i.test(k))||"";
+    if($("tmleTreatment")) $("tmleTreatment").value=treatmentCol;
+    if($("tmleOutcome")) $("tmleOutcome").value=metricCol||"";
+    const confidence=groupCol||treatmentCol;
+    $("status").textContent="Detected "+metric+" experiment · treatment: "+confidence+(metricCol?" · outcome: "+metricCol:"");
+  }
+  return {rows:out, metric, metricCol, groupCol, treatmentCol, preCol, timeCol, ratioPossible};
+}
+
+function loadUploaded(rawRows,name){
+  const inferred=inferDataset(rawRows);
+  rows=inferred.rows;
+  if($("scenario")) $("scenario").value="conversion";
+  if($("scenarioTitle")) $("scenarioTitle").textContent="Detected dataset";
+  if($("scenarioDescription")) $("scenarioDescription").textContent=inferred.treatmentCol
+    ? "Experiment structure inferred from your uploaded columns. Review the detected mapping before analysis."
+    : "Could not confidently identify a treatment/control column. Add or select a 0/1 treatment assignment.";
+  renderAnalysis();
+  $("status").textContent=(inferred.treatmentCol?"Detected and loaded ":"Loaded ")+rows.length.toLocaleString()+" rows"+(name?" · "+name:"")+
+    (inferred.treatmentCol?" · "+inferred.metric+" analysis suggested":" · manual mapping required");
+}
+
 function demo(){
   const r=[]; for(let i=0;i<1600;i++){const t=i%2, pre=80+Math.random()*40, conv=(Math.random()<(.12+(t?.035:0))?1:0), gb=Math.max(0,(t?52:47)+pre*.45+(Math.random()-.5)*35);r.push({treatment:t,conversion:conv,gross_bookings:gb,pre_metric:pre,country:["UK","US","DE","IN"][i%4]});} return r;
 }
@@ -145,9 +206,9 @@ function printPDF(){window.print();}
 function load(data,name){rows=data; $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows"+(name?" · "+name:"")+"."; renderAnalysis();}
 $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";$("baseline").value=b?"10":"50";$("baselineSd").disabled=b;$("baselineSd").value=b?"":"20";renderAnalysis();});
 ["metricColumn","denominatorColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
-$("file").addEventListener("change",e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f);}});
+$("file").addEventListener("change",e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>loadUploaded(parseCSV(r.result),f.name);r.readAsText(f);}});
 $("loadDemo").onclick=()=>load(demo(),"demo-experiment.csv");
-$("dropzone").addEventListener("dragover",e=>e.preventDefault());$("dropzone").addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>load(parseCSV(r.result),f.name);r.readAsText(f);}});
+$("dropzone").addEventListener("dragover",e=>e.preventDefault());$("dropzone").addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>loadUploaded(parseCSV(r.result),f.name);r.readAsText(f);}});
 $("downloadHTML").onclick=downloadHTML;$("printPDF").onclick=printPDF;$("runPower").onclick=powerMDE;
 load(demo(),"demo-experiment.csv");
 
