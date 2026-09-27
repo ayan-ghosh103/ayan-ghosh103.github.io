@@ -100,7 +100,7 @@ function renderAnalysis(){
 }
 
 function cuped(c){
-  if(!c.pre){$("cuped").innerHTML='<div class="card"><strong>Not configured</strong><span>Add a pre-period metric to estimate a CUPED-style adjusted effect.</span></div>';return;}
+  if(c.metric==="ratio"){$("cuped").innerHTML='<div class="card"><strong>Not applied</strong><span>Ratio metrics need a dedicated ratio-adjustment design; CUPED is disabled here rather than adjusting the numerator alone.</span></div>';return;}\n  if(!c.pre){$("cuped").innerHTML='<div class="card"><strong>Not configured</strong><span>Add a pre-period metric to estimate a CUPED-style adjusted effect.</span></div>';return;}
   const all=rows, x=all.map(r=>num(r[c.pre])), y=all.map(r=>num(r[c.metricColumn])), mx=mean(x),my=mean(y),vx=mean(x.map(v=>(v-mx)**2)),cov=mean(x.map((v,i)=>(v-mx)*(y[i]-my))),theta=vx?cov/vx:0, adj=y.map((v,i)=>v-theta*(x[i]-mx)), ac=mean(adj.filter((_,i)=>Number(all[i].treatment)===0)),at=mean(adj.filter((_,i)=>Number(all[i].treatment)===1));
   card("cuped",[{l:"Raw effect",v:c.metric==="binary"?fmt((mean(rows.filter(r=>Number(r.treatment)===1).map(r=>num(r[c.metricColumn])))-mean(rows.filter(r=>Number(r.treatment)===0).map(r=>num(r[c.metricColumn]))))*100)+" pp":fmt(mean(rows.filter(r=>Number(r.treatment)===1).map(r=>num(r[c.metricColumn])))-mean(rows.filter(r=>Number(r.treatment)===0).map(r=>num(r[c.metricColumn])))),s:"before adjustment"},{l:"Adjusted effect",v:c.metric==="binary"?fmt((at-ac)*100)+" pp":fmt(at-ac),s:"CUPED-style estimate"},{l:"Theta",v:fmt(theta,3),s:"pre-period adjustment coefficient"}]);
 }
@@ -203,7 +203,7 @@ function sequentialLook(){
   const info=Math.min(1,Math.max(.01,Number($("informationFraction")?.value||look/planned)));
   const c=getConfig(); if(!lastResult)return;
   if(mode==="concluded"){
-    return {mode,look,planned,info,alpha:c.alpha,boundary:c.alpha,zBoundary:normalInv(1-c.alpha/2),adjustedP:lastResult.res.p,decision:lastResult.res.p<c.alpha?"Crosses final alpha boundary":"Does not cross final alpha boundary"};
+    return {mode,look,planned,info,alpha:c.alpha,boundary:c.alpha,zBoundary:normalInv(1-c.alpha/2),adjustedP:lastResult.res.p,nominalP:lastResult.res.p,decision:lastResult.res.p<c.alpha?"Crosses final alpha boundary":"Does not cross final alpha boundary"};
   }
   const z=Math.abs(lastResult.res.se?lastResult.res.diff/lastResult.res.se:0);
   const zFinal=normalInv(1-c.alpha/2);
