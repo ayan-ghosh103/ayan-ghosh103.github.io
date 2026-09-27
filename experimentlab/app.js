@@ -220,22 +220,41 @@ function tmleModule(){
   $("tmleResult").innerHTML='<strong>TMLE setup:</strong> treatment='+escapeHtml(treatment)+', outcome='+escapeHtml(outcome)+', covariates='+escapeHtml(covars)+'.<br><span class="muted">The browser MVP documents the estimand and required nuisance models; production TMLE should use cross-fitting, positivity checks and influence-curve based uncertainty.</span>';
 }
 
-function reportSeries(c){
+function reportSeriesForMetric(def){
   const timeKey=$("timeColumn")?.value.trim();
   if(!timeKey||!rows.length||!rows.some(r=>r[timeKey]!==undefined))return null;
-  const vals=[...new Set(rows.map(r=>String(r[timeKey])).filter(Boolean))].sort((a,b)=>Number(a)-Number(b));
-  const metric=c.metricColumn;
-  return vals.map(t=>{const a=rows.filter(r=>String(r[timeKey])===t),cc=a.filter(r=>Number(r.treatment)===0).map(r=>num(r[metric])).filter(Number.isFinite),tt=a.filter(r=>Number(r.treatment)===1).map(r=>num(r[metric])).filter(Number.isFinite);return {time:t,control:mean(cc),treatment:mean(tt),n:a.length};}).filter(x=>Number.isFinite(x.control)&&Number.isFinite(x.treatment));
+  const vals=[...new Set(rows.map(r=>String(r[timeKey])).filter(Boolean))].sort((a,b)=>{
+    const da=Date.parse(a),db=Date.parse(b);
+    return Number.isFinite(da)&&Number.isFinite(db)?da-db:Number(a)-Number(b);
+  });
+  return vals.map(t=>{
+    const a=rows.filter(r=>String(r[timeKey])===t),cc=a.filter(r=>Number(r.treatment)===0),tt=a.filter(r=>Number(r.treatment)===1);
+    let control,treatment;
+    if(def.type==="ratio"){
+      const cn=cc.reduce((s,r)=>s+(Number.isFinite(num(r[def.column]))?num(r[def.column]):0),0),cd=cc.reduce((s,r)=>s+(Number.isFinite(num(r[def.denominator]))?num(r[def.denominator]):0),0);
+      const tn=tt.reduce((s,r)=>s+(Number.isFinite(num(r[def.column]))?num(r[def.column]):0),0),td=tt.reduce((s,r)=>s+(Number.isFinite(num(r[def.denominator]))?num(r[def.denominator]):0),0);
+      control=cd>0?cn/cd:NaN;treatment=td>0?tn/td:NaN;
+    } else {
+      control=mean(cc.map(r=>num(r[def.column])).filter(Number.isFinite));
+      treatment=mean(tt.map(r=>num(r[def.column])).filter(Number.isFinite));
+    }
+    return {time:t,control,treatment,n:a.length};
+  }).filter(x=>Number.isFinite(x.control)&&Number.isFinite(x.treatment));
 }
-function reportTrendSvg(series,c){
-  if(!series||series.length<2)return '<div class="report-note">No temporal field was detected.</div>';
-  const W=900,H=300,L=62,R=24,T=26,B=48,vals=series.flatMap(x=>[x.control,x.treatment]),min=Math.min(...vals),max=Math.max(...vals),range=(max-min)||1;
+function reportTrendSvg(series,def){
+  if(!series||series.length<2)return '<div class="report-note">No usable temporal data.</div>';
+  const W=900,H=285,L=62,R=24,T=26,B=48,vals=series.flatMap(x=>[x.control,x.treatment]),min=Math.min(...vals),max=Math.max(...vals),range=(max-min)||1;
   const x=i=>L+i*(W-L-R)/Math.max(1,series.length-1),y=v=>T+(max-v)*(H-T-B)/range,path=k=>series.map((d,i)=>(i?'L':'M')+' '+x(i).toFixed(1)+' '+y(d[k]).toFixed(1)).join(' ');
-  const labels=series.map((d,i)=>'<text x="'+x(i).toFixed(1)+'" y="'+(H-17)+'" text-anchor="middle">'+escapeHtml(d.time)+'</text>').join('');
-  const dots=k=>series.map((d,i)=>'<circle cx="'+x(i).toFixed(1)+'" cy="'+y(d[k]).toFixed(1)+'" r="3.5" class="dot '+k+'"></circle>').join('');
-  const grid=[0,1,2,3,4].map(i=>{const v=min+range*i/4,yy=y(v);return '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" class="gridline"></line><text x="'+(L-10)+'" y="'+(yy+4)+'" text-anchor="end">'+fmt(v,c.metric==='binary'?3:2)+'</text>';}).join('');
-  return '<div class="chart-card"><div class="chart-title">Treatment vs control over time</div><div class="chart-subtitle">'+escapeHtml(metricLabel(c))+' by '+escapeHtml($("timeColumn").value.trim())+'</div><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Treatment and control trend">'+grid+'<path d="'+path('control')+'" class="line control"></path><path d="'+path('treatment')+'" class="line treatment"></path>'+dots('control')+dots('treatment')+labels+'</svg><div class="legend"><span><i class="legend-control"></i>Control</span><span><i class="legend-treatment"></i>Treatment</span></div></div>';
+  const labels=series.map((d,i)=>{const show=series.length<=14||i===0||i===series.length-1||i%Math.ceil(series.length/10)===0;return show?'<text x="'+x(i).toFixed(1)+'" y="'+(H-17)+'" text-anchor="middle">'+escapeHtml(d.time)+'</text>':''}).join('');
+  const dots=k=>series.map((d,i)=>'<circle cx="'+x(i).toFixed(1)+'" cy="'+y(d[k]).toFixed(1)+'" r="3" class="dot '+k+'"></circle>').join('');
+  const grid=[0,1,2,3,4].map(i=>{const v=min+range*i/4,yy=y(v);return '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" class="gridline"></line><text x="'+(L-10)+'" y="'+(yy+4)+'" text-anchor="end">'+metricValueLabel(def,v)+'</text>';}).join('');
+  return '<div class="chart-card"><div class="chart-title">'+escapeHtml(def.name)+'</div><div class="chart-subtitle">'+escapeHtml(metricDirectionText(def))+' · '+escapeHtml(def.column)+' by '+escapeHtml($("timeColumn").value.trim())+'</div><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+escapeHtml(def.name)+' treatment and control trend">'+grid+'<path d="'+path('control')+'" class="line control"></path><path d="'+path('treatment')+'" class="line treatment"></path>'+dots('control')+dots('treatment')+labels+'</svg><div class="legend"><span><i class="legend-control"></i>Control</span><span><i class="legend-treatment"></i>Treatment</span></span></div></div>';
 }
+function reportTrendSections(metrics){
+  const parts=metrics.map(def=>'<div class="metric-trend"><div class="trend-role">'+escapeHtml(def.role)+' · '+escapeHtml(metricDirectionText(def))+'</div>'+reportTrendSvg(reportSeriesForMetric(def),def)+'</div>').join("");
+  return parts||'<div class="muted">No temporal metrics configured.</div>';
+}
+
 function metricValueLabel(def,x){
   if(!Number.isFinite(x)) return "—";
   return def.type==="binary" ? pct(x) : fmt(x);
@@ -329,7 +348,8 @@ function readMetricPlan(){
     if(!column)return;
     const type=el.querySelector(".metric-type,.primaryMetricType")?.value||inferMetricType(column);
     const denominator=el.querySelector(".metric-denominator,.primaryMetricDenominator")?.value.trim()||"denominator";
-    out.push({role,name,type,column,denominator,primary:role==="Primary"});
+    const direction=el.querySelector(".metric-direction,.primaryMetricDirection")?.value||"up";
+    out.push({role,name,type,column,denominator,direction,primary:role==="Primary"});
   });
   if(!out.some(x=>x.primary)){
     out.unshift({role:"Primary",name:c.metricColumn||"Primary metric",type:c.metric,column:c.metricColumn,denominator:c.denominator,primary:true});
@@ -352,7 +372,7 @@ function metricPlanRow(role){
   const el=document.createElement("div");
   el.className="metric-row";
   el.innerHTML='<input type="hidden" class="metric-role" value="'+(role==="Guardrail"?"guardrail":role==="Primary"?"primary":"secondary")+'"><div class="metric-row-head"><span class="metric-role-label">'+role+'</span><button type="button" class="metric-remove" aria-label="Remove metric">Remove</button></div>'+
-    '<div class="grid metric-grid"><label>Name<input class="metric-name" placeholder="'+role+' metric"></label><label>Type<select class="metric-type"><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<select class="metric-column"><option value="">Select metric column…</option></select></label><label class="metric-denominator-wrap">Denominator<select class="metric-denominator"><option value="denominator">denominator</option></select></label></div>';
+    '<div class="grid metric-grid"><label>Name<input class="metric-name" placeholder="'+role+' metric"></label><label>Type<select class="metric-type"><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<select class="metric-column"><option value="">Select metric column…</option></select></label><label>Good direction<select class="metric-direction"><option value="up">Higher is better ↑</option><option value="down">Lower is better ↓</option></select></label><label class="metric-denominator-wrap">Denominator<select class="metric-denominator"><option value="denominator">denominator</option></select></label></div>';
   el.querySelector(".metric-remove").onclick=()=>{el.remove();};
   el.querySelector(".metric-column").addEventListener("change",e=>{
     const col=e.target.value;
@@ -368,7 +388,7 @@ function initMetricPlan(){
   host.dataset.ready="1";
   const row=document.createElement("div");
   row.className="metric-row primary-metric-row";
-  row.innerHTML='<input type="hidden" class="metric-role" value="primary"><div class="metric-row-head"><span class="metric-role-label">Primary</span><span class="metric-role-note">The first primary metric drives the main visual readout</span></div><div class="grid metric-grid"><label>Name<input class="primaryMetricName" value="Primary metric"></label><label>Type<select class="primaryMetricType"><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<select class="primaryMetricColumn"><option value="">Select metric column…</option></select></label><label class="metric-denominator-wrap">Denominator<select class="primaryMetricDenominator"><option value="denominator">denominator</option></select></label></div>';
+  row.innerHTML='<input type="hidden" class="metric-role" value="primary"><div class="metric-row-head"><span class="metric-role-label">Primary</span><span class="metric-role-note">The first primary metric drives the main visual readout</span></div><div class="grid metric-grid"><label>Name<input class="primaryMetricName" value="Primary metric"></label><label>Type<select class="primaryMetricType"><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<select class="primaryMetricColumn"><option value="">Select metric column…</option></select></label><label>Good direction<select class="primaryMetricDirection"><option value="up">Higher is better ↑</option><option value="down">Lower is better ↓</option></select></label><label class="metric-denominator-wrap">Denominator<select class="primaryMetricDenominator"><option value="denominator">denominator</option></select></label></div>';
   host.appendChild(row);
   const sync=()=>{
     const c=getConfig(),cols=metricColumnCandidates(),select=row.querySelector(".primaryMetricColumn"),current=select.value;
@@ -388,14 +408,22 @@ function initMetricPlan(){
   $("addSecondaryMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Secondary")));
   $("addGuardrailMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Guardrail")));
 }
+function metricDirectionText(def){
+  return def.direction==="down" ? "Lower is better ↓" : "Higher is better ↑";
+}
+function metricDirectionStatus(def,r){
+  if(!r||!Number.isFinite(r.diff)) return "—";
+  const favorable=def.direction==="down" ? r.diff<0 : r.diff>0;
+  return favorable ? "Favorable" : (Math.abs(r.diff)<1e-12 ? "Flat" : "Unfavorable");
+}
 function reportMetricTable(metrics){
   const rowsHtml=metrics.map(def=>{
     const r=metricResult(def);
     if(!r)return '<tr><td><b>'+escapeHtml(def.role)+'</b></td><td>'+escapeHtml(def.name)+'</td><td colspan="5">Column not found or insufficient numeric data</td></tr>';
     const ci=def.type==="binary"?fmt(r.lo*100,2)+" to "+fmt(r.hi*100,2)+" pp":fmt(r.lo,2)+" to "+fmt(r.hi,2);
-    return '<tr><td><b>'+escapeHtml(def.role)+'</b></td><td><b>'+escapeHtml(def.name)+'</b><small>'+escapeHtml(def.column)+'</small></td><td>'+metricValueLabel(def,r.control)+'</td><td>'+metricValueLabel(def,r.treatment)+'</td><td><b>'+metricEffectLabel(def,r.diff)+'</b><small>'+pct(r.lift,1)+' lift</small></td><td>'+r.p.toFixed(4)+'</td><td>'+ci+'</td></tr>';
+    return '<tr><td><b>'+escapeHtml(def.role)+'</b></td><td><b>'+escapeHtml(def.name)+'</b><small>'+escapeHtml(def.column)+' · '+escapeHtml(metricDirectionText(def))+'</small></td><td>'+metricValueLabel(def,r.control)+'</td><td>'+metricValueLabel(def,r.treatment)+'</td><td><b>'+metricEffectLabel(def,r.diff)+'</b><small>'+pct(r.lift,1)+' lift</small></td><td><b>'+escapeHtml(metricDirectionStatus(def,r))+'</b><small>p='+r.p.toFixed(4)+'</small></td><td>'+ci+'</td></tr>';
   }).join("");
-  return '<div class="metric-readout-table"><table><thead><tr><th>Role</th><th>Metric</th><th>Control</th><th>Treatment</th><th>Effect</th><th>p-value</th><th>95% CI</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
+  return '<div class="metric-readout-table"><table><thead><tr><th>Role</th><th>Metric</th><th>Control</th><th>Treatment</th><th>Effect</th><th>Direction / status</th><th>95% CI</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
 }
 
 function downloadHTML(){
@@ -408,10 +436,10 @@ function downloadHTML(){
   }).join(""):"";
   const maxArm=Math.max(r?.control||0,r?.treatment||0)||1,cw=Math.max(5,(r?.control||0)/maxArm*100),tw=Math.max(5,(r?.treatment||0)/maxArm*100);
   const html='<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>*{box-sizing:border-box}body{margin:0;background:#f4f6f7;color:#17202a;font:14px/1.55 Inter,system-ui,sans-serif}.page{max-width:1080px;margin:auto;padding:42px}.hero,.section{background:#fff;border:1px solid #dfe5ea;border-radius:16px}.hero{padding:30px 32px;margin-bottom:16px}.eyebrow{font-size:10px;font-weight:800;letter-spacing:.18em;color:#6b7884;text-transform:uppercase}.hero h1{font-size:38px;line-height:1.05;margin:8px 0}.sub,.muted{color:#6c7884}.meta{display:flex;gap:28px;flex-wrap:wrap;margin-top:18px;color:#6c7884;font-size:12px}.meta b{display:block;color:#17202a;font-size:14px}.section{padding:24px 26px;margin:16px 0}.section h2{font-size:21px;margin:0 0 4px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.card{background:#fff;border:1px solid #dfe5ea;border-radius:13px;padding:16px}.card .label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#74808b}.card strong{display:block;font-size:25px;margin:3px 0}.card span{font-size:12px;color:#74808b}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.arm{padding:18px;border:1px solid #dfe5ea;border-radius:13px}.arm h3{margin:0 0 3px}.value{font-size:31px;font-weight:800}.bar{height:10px;background:#e9edf0;border-radius:20px;overflow:hidden;margin-top:9px}.fill{height:100%;border-radius:20px}.control-fill{background:#66727d}.treatment-fill{background:#86b93d}.chart-card{margin-top:12px;border:1px solid #e2e7eb;border-radius:13px;padding:15px}.chart-title{font-weight:800}.chart-subtitle{font-size:12px;color:#74808b;margin:2px 0 8px}.gridline{stroke:#e5e9ed}.line{fill:none;stroke-width:3}.line.control{stroke:#66727d}.line.treatment{stroke:#86b93d}.dot{fill:#fff;stroke-width:2}.dot.control{stroke:#66727d}.dot.treatment{stroke:#86b93d}.legend{display:flex;gap:18px;font-size:12px;color:#66727e;margin-top:4px}.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px}.legend-control{background:#66727d}.legend-treatment{background:#86b93d}.callout{padding:14px 16px;border-left:4px solid #86b93d;background:#f3f8eb;border-radius:7px}.metric-readout-table table{width:100%;border-collapse:collapse;margin-top:10px}.metric-readout-table th,.metric-readout-table td{padding:11px 9px;border-bottom:1px solid #e6eaee;text-align:left;vertical-align:top}.metric-readout-table th{font-size:10px;text-transform:uppercase;color:#74808b}.metric-readout-table small{display:block;color:#7b8792;font-size:11px;margin-top:2px}.foot{font-size:11px;color:#89949e;margin-top:22px}@media(max-width:780px){.page{padding:20px}.cards{grid-template-columns:1fr 1fr}.comparison{grid-template-columns:1fr}.metric-readout-table{overflow:auto}.metric-readout-table table{min-width:760px}}</style></head><body><div class="page">'+
-  '<div class="hero"><div class="eyebrow">Experiment readout</div><h1>'+escapeHtml(primary.name)+'</h1><p class="sub">Treatment vs control · primary effect, secondary outcomes and guardrails</p><div class="meta"><span><b>'+cn.toLocaleString()+' / '+tn.toLocaleString()+'</b>control / treatment observations</span><span><b>'+escapeHtml(c.metricColumn)+'</b>primary metric</span><span><b>'+(series?series.length:"—")+'</b>time periods</span><span><b>'+escapeHtml($("timeColumn")?.value||"Not detected")+'</b>time field</span></div></div>'+
+  '<div class="hero"><div class="eyebrow">Experiment readout</div><h1>'+escapeHtml(primary.name)+'</h1><p class="sub">Treatment vs control · primary effect, secondary outcomes and guardrails</p><div class="meta"><span><b>'+cn.toLocaleString()+' / '+tn.toLocaleString()+'</b>control / treatment observations</span><span><b>'+escapeHtml(primary.column)+'</b>primary metric</span><span><b>'+escapeHtml(metricDirectionText(primary))+'</b>success direction</span><span><b>'+escapeHtml($("timeColumn")?.value||"Not detected")+'</b>time field</span></div></div>'+
   '<div class="cards"><div class="card"><div class="label">Control</div><strong>'+metricValueLabel(c,r?.control)+'</strong><span>primary metric baseline</span></div><div class="card"><div class="label">Treatment</div><strong>'+metricValueLabel(c,r?.treatment)+'</strong><span>primary metric observed</span></div><div class="card"><div class="label">Primary effect</div><strong>'+effect+'</strong><span>treatment − control</span></div><div class="card"><div class="label">Relative lift</div><strong>'+lift+'</strong><span>relative to control</span></div></div>'+
   '<div class="section"><h2>Primary metric</h2><p class="muted">'+escapeHtml(primary.name)+' · '+escapeHtml(c.metricColumn)+'</p><div class="comparison"><div class="arm"><h3>Control</h3><div class="value">'+metricValueLabel(c,r?.control)+'</div><div class="bar"><div class="fill control-fill" style="width:'+cw+'%"></div></div></div><div class="arm"><h3>Treatment</h3><div class="value">'+metricValueLabel(c,r?.treatment)+'</div><div class="bar"><div class="fill treatment-fill" style="width:'+tw+'%"></div></div></div></div></div>'+
-  '<div class="section"><h2>Primary trend</h2>'+reportTrendSvg(series,c)+'</div>'+
+  '<div class="section"><h2>Metric trends</h2><p class="muted">Treatment and control are shown over time for every configured metric.</p>'+reportTrendSections(metrics)+'</div>'+
   (primaryMetrics.length>1?'<div class="section"><h2>Additional primary metrics</h2><p class="muted">Multiple primary metrics are supported. The first primary metric drives the headline visual; all primary metrics are reported separately.</p>'+reportMetricTable(primaryMetrics.slice(1))+'</div>':"")+(supportingMetrics.length?'<div class="section"><h2>Secondary metrics & guardrails</h2><p class="muted">Supporting outcomes are shown alongside the primary metric and should be interpreted against pre-specified criteria.</p>'+reportMetricTable(supportingMetrics)+'</div>':"")+
   '<div class="section"><h2>Primary uncertainty</h2><div class="cards"><div class="card"><div class="label">95% CI</div><strong>'+ci+'</strong><span>normal approximation</span></div><div class="card"><div class="label">p-value</div><strong>'+(r?.p?.toFixed(4)||"—")+'</strong><span>two-sided test</span></div><div class="card"><div class="label">Control N</div><strong>'+cn.toLocaleString()+'</strong><span>observations</span></div><div class="card"><div class="label">Treatment N</div><strong>'+tn.toLocaleString()+'</strong><span>observations</span></div></div></div>'+
   (segmentRows?'<div class="section"><h2>Primary segment view</h2><p class="muted">Country-level descriptive comparison.</p><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:9px;border-bottom:1px solid #e6eaee">Segment</th><th style="text-align:left;padding:9px;border-bottom:1px solid #e6eaee">Control</th><th style="text-align:left;padding:9px;border-bottom:1px solid #e6eaee">Treatment</th><th style="text-align:left;padding:9px;border-bottom:1px solid #e6eaee">Lift</th><th style="text-align:left;padding:9px;border-bottom:1px solid #e6eaee">N</th></tr></thead><tbody>'+segmentRows+'</tbody></table></div>':"")+
