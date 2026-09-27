@@ -1,0 +1,40 @@
+---
+layout: default
+title: Voucher Incrementality — Causal Inference
+---
+<section class="case-page">
+  <a class="back-link" href="/#work">← Back to selected work</a>
+  <div class="eyebrow">UBER · CAUSAL INFERENCE · INCREMENTALITY · VOUCHER PORTFOLIO</div>
+  <h1>Measuring the incremental value of vouchers</h1>
+  <p class="case-lead">Separating genuine incremental business impact from activity that would have happened anyway.</p>
+
+  <h2>The business question</h2>
+  <p>Observed trips and bookings after a voucher intervention do not automatically represent incremental value. Customers may have taken the trip without the voucher, and different voucher interventions can interact through substitution. The core question was: <b>what activity is genuinely caused by the voucher?</b></p>
+
+  <h2>Scope</h2>
+  <p>I led incrementality and causal analyses across <b>different voucher types within the broader voucher portfolio</b>. This is separate from the UberMe product experimentation work.</p>
+
+  <h2>Choosing the causal design</h2>
+  <p>The available treatment and rollout structure varied across initiatives, so I used different causal approaches rather than forcing every problem into a standard A/B test.</p>
+  <ul>
+    <li><b>Difference-in-Differences</b> for treatment/control comparisons over time.</li>
+    <li><b>Staggered DiD</b> where treatment adoption occurred at different times.</li>
+    <li><b>Synthetic Control</b> to construct a counterfactual from comparable untreated units.</li>
+    <li><b>TMLE</b> for treatment-effect estimation in settings where a more flexible adjustment approach was appropriate.</li>
+    <li><b>Future-treated groups and holdouts</b> where rollout structure allowed stronger counterfactual construction.</li>
+  </ul>
+
+  <h2>Triangulating evidence</h2>
+  <p>The objective was not methodological complexity for its own sake. I compared evidence across designs and considered underlying trends, treatment timing and potential substitution to estimate the incremental contribution of voucher interventions.</p>
+
+  <h2>Business impact</h2>
+  <div class="impact"><b>25–36%</b> incremental Trips · <b>40–52%</b> incremental Gross Bookings</div>
+  <p>The findings informed investment decisions, prioritisation and subsequent voucher initiatives across the portfolio.</p>
+
+  <h2>What this demonstrates</h2>
+  <ul>
+    <li><b>Experimentation & causal inference:</b> matching methodology to treatment structure and assumptions.</li>
+    <li><b>Product thinking:</b> connecting treatment effects to investment and prioritisation decisions.</li>
+    <li><b>Analytical judgement:</b> triangulating multiple designs rather than relying on one estimate.</li>
+  </ul>
+</section>
