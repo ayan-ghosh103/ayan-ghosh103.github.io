@@ -30,6 +30,11 @@ title: McAfee Personalisation & Recommendation Systems
   <h2>Connecting ML to commercial decisions</h2>
   <p>I extended the customer-level analysis into dynamic subscription pricing by analysing segment-level behaviour and price sensitivity. This connected customer understanding with commercial decisions around conversion and pricing efficiency.</p>
 
+
+  <h2>From prediction to intervention</h2>
+  <p>A key part of the work was distinguishing between understanding customers and deciding what to do for them. Segmentation established behavioural groups; recommendation models translated those patterns into product suggestions; uplift modelling added an intervention lens for retention and engagement targeting.</p>
+  <p>This created a more decision-oriented ML workflow: identify the customer context, estimate what action is relevant, and connect the output to a commercial or customer-experience objective.</p>
+
   <h2>What this demonstrates</h2>
   <ul>
     <li><b>Data Science / ML:</b> segmentation, recommendation systems and uplift modelling.</li>
