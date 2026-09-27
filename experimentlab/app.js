@@ -97,6 +97,7 @@ function loadUploaded(rawRows,name){
   const inferred=inferDataset(rawRows);
   rows=inferred.rows;
   renderDatasetProfile(inferred);
+  refreshMetricPlanOptions();
   if($("scenario")) $("scenario").value="conversion";
   if($("scenarioTitle")) $("scenarioTitle").textContent="Detected dataset";
   if($("scenarioDescription")) $("scenarioDescription").textContent=inferred.treatmentCol
@@ -243,30 +244,61 @@ function metricEffectLabel(def,diff){
   if(!Number.isFinite(diff)) return "—";
   return def.type==="binary" ? fmt(diff*100,2)+" pp" : fmt(diff,2);
 }
+function metricRoleForColumn(col){
+  const s=String(col||"").toLowerCase();
+  if(/cancel|refund|complaint|failure|error|latency|churn|unsubscribe|bounce|defect/.test(s)) return "guardrail";
+  if(/conversion|activation|retention|booking|revenue|gmv|gross|order|purchase/.test(s)) return "secondary";
+  return "secondary";
+}
+function inferMetricType(col){
+  const values=rows.map(r=>num(r[col])).filter(Number.isFinite);
+  if(values.length && values.every(v=>v===0||v===1)) return "binary";
+  if(/revenue|gmv|gross.?bookings|booking|spend|amount|value/.test(String(col).toLowerCase())) return "revenue";
+  return "continuous";
+}
+function metricColumnCandidates(){
+  if(!rows.length)return [];
+  const keys=Object.keys(rows[0]);
+  return keys.filter(k=>{
+    if(/^(treatment|group|variant|arm|country|date|time|week|month|day|period|user.?id|customer.?id|id)$/i.test(k))return false;
+    return rows.some(r=>Number.isFinite(num(r[k])));
+  });
+}
+function optionHtml(cols,selected){
+  return '<option value="">Select metric column…</option>'+cols.map(k=>'<option value="'+escapeHtml(k)+'" '+(k===selected?"selected":"")+'>'+escapeHtml(k)+'</option>').join("");
+}
+function syncMetricRowOptions(el,cols){
+  const select=el.querySelector(".metric-column");
+  if(!select)return;
+  const current=select.value;
+  select.innerHTML=optionHtml(cols,current);
+  if(current)select.value=current;
+  const type=el.querySelector(".metric-type");
+  if(select.value && type && !el.classList.contains("primary-metric-row")) type.value=inferMetricType(select.value);
+  const name=el.querySelector(".metric-name");
+  if(name && !name.value && select.value) name.value=select.value.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+}
+function refreshMetricPlanOptions(){
+  const cols=metricColumnCandidates();
+  document.querySelectorAll("#metricRows .metric-row").forEach(el=>syncMetricRowOptions(el,cols));
+}
 function readMetricPlan(){
   const c=getConfig();
-  const out=[{
-    role:"Primary",
-    name:document.querySelector(".primaryMetricName")?.value.trim()||c.metricColumn||"Primary metric",
-    type:c.metric,
-    column:c.metricColumn,
-    denominator:c.denominator,
-    primary:true
-  }];
-  document.querySelectorAll("#metricRows .metric-row:not(.primary-metric-row)").forEach(el=>{
-    const type=el.querySelector(".metric-role")?.value||"secondary";
-    const name=el.querySelector(".metric-name")?.value.trim();
-    const column=el.querySelector(".metric-column")?.value.trim();
-    if(!name||!column)return;
-    out.push({
-      role:type==="guardrail"?"Guardrail":"Secondary",
-      name,
-      type:el.querySelector(".metric-type")?.value||"continuous",
-      column,
-      denominator:el.querySelector(".metric-denominator")?.value.trim()||"denominator",
-      primary:false
-    });
+  const out=[];
+  document.querySelectorAll("#metricRows .metric-row").forEach((el,i)=>{
+    const roleEl=el.querySelector(".metric-role");
+    const roleValue=roleEl?.value||"primary";
+    const role=roleValue==="guardrail"?"Guardrail":roleValue==="secondary"?"Secondary":"Primary";
+    const name=el.querySelector(".metric-name,.primaryMetricName")?.value.trim()||el.querySelector(".metric-column,.primaryMetricColumn")?.value||("Metric "+(i+1));
+    const column=el.querySelector(".metric-column,.primaryMetricColumn")?.value.trim();
+    if(!column)return;
+    const type=el.querySelector(".metric-type,.primaryMetricType")?.value||inferMetricType(column);
+    const denominator=el.querySelector(".metric-denominator,.primaryMetricDenominator")?.value.trim()||"denominator";
+    out.push({role,name,type,column,denominator,primary:role==="Primary"});
   });
+  if(!out.some(x=>x.primary)){
+    out.unshift({role:"Primary",name:c.metricColumn||"Primary metric",type:c.metric,column:c.metricColumn,denominator:c.denominator,primary:true});
+  }
   return out;
 }
 function metricResult(def){
@@ -277,38 +309,47 @@ function metricResult(def){
     if(!a.length||!b.length)return null;
     return ratioTest(a,b,def.denominator);
   }
-  const a=vals0.map(r=>num(r[def.column])).filter(Number.isFinite);
-  const b=vals1.map(r=>num(r[def.column])).filter(Number.isFinite);
+  const a=vals0.map(r=>num(r[def.column])).filter(Number.isFinite),b=vals1.map(r=>num(r[def.column])).filter(Number.isFinite);
   if(!a.length||!b.length)return null;
   return def.type==="binary"?binaryTest(a,b):continuousTest(a,b);
 }
 function metricPlanRow(role){
-  const id="metric-"+Date.now()+"-"+Math.random().toString(36).slice(2);
   const el=document.createElement("div");
   el.className="metric-row";
-  el.innerHTML='<div class="metric-row-head"><span class="metric-role-label">'+role+'</span><button type="button" class="metric-remove" aria-label="Remove metric">Remove</button></div>'+
-    '<div class="grid metric-grid"><label>Name<input class="metric-name" placeholder="'+role+' metric"></label><label>Type<select class="metric-type"><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<input class="metric-column" placeholder="e.g. conversion"></label><label class="metric-denominator-wrap">Denominator<input class="metric-denominator" value="denominator"></label></div>';
+  el.innerHTML='<input type="hidden" class="metric-role" value="'+(role==="Guardrail"?"guardrail":role==="Primary"?"primary":"secondary")+'"><div class="metric-row-head"><span class="metric-role-label">'+role+'</span><button type="button" class="metric-remove" aria-label="Remove metric">Remove</button></div>'+
+    '<div class="grid metric-grid"><label>Name<input class="metric-name" placeholder="'+role+' metric"></label><label>Type<select class="metric-type"><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<select class="metric-column"><option value="">Select metric column…</option></select></label><label class="metric-denominator-wrap">Denominator<select class="metric-denominator"><option value="denominator">denominator</option></select></label></div>';
   el.querySelector(".metric-remove").onclick=()=>{el.remove();};
-  const roleEl=document.createElement("input");
-  roleEl.type="hidden"; roleEl.className="metric-role"; roleEl.value=role==="Guardrail"?"guardrail":"secondary";
-  el.prepend(roleEl);
+  el.querySelector(".metric-column").addEventListener("change",e=>{
+    const col=e.target.value;
+    const type=el.querySelector(".metric-type");
+    if(type && col)type.value=inferMetricType(col);
+    const name=el.querySelector(".metric-name");
+    if(name && !name.value && col)name.value=col.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+  });
   return el;
 }
 function initMetricPlan(){
-  const host=$("metricRows"); if(!host)return;
-  if(host.querySelector(".primary-metric-row"))return;
+  const host=$("metricRows"); if(!host||host.dataset.ready)return;
+  host.dataset.ready="1";
   const row=document.createElement("div");
   row.className="metric-row primary-metric-row";
-  row.innerHTML='<div class="metric-row-head"><span class="metric-role-label">Primary</span><span class="metric-role-note">Drives the main effect analysis</span></div><div class="grid metric-grid"><label>Name<input class="primaryMetricName" value="Primary metric"></label><label>Type<select class="primaryMetricType" disabled><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<input class="primaryMetricColumn" disabled></label><label class="metric-denominator-wrap">Denominator<input class="primaryMetricDenominator" disabled></label></div>';
+  row.innerHTML='<input type="hidden" class="metric-role" value="primary"><div class="metric-row-head"><span class="metric-role-label">Primary</span><span class="metric-role-note">The first primary metric drives the main visual readout</span></div><div class="grid metric-grid"><label>Name<input class="primaryMetricName" value="Primary metric"></label><label>Type<select class="primaryMetricType"><option value="binary">Binary · rate</option><option value="continuous">Continuous · mean</option><option value="revenue">Revenue · mean</option><option value="ratio">Ratio · numerator / denominator</option></select></label><label>Metric column<select class="primaryMetricColumn"><option value="">Select metric column…</option></select></label><label class="metric-denominator-wrap">Denominator<select class="primaryMetricDenominator"><option value="denominator">denominator</option></select></label></div>';
   host.appendChild(row);
   const sync=()=>{
-    const c=getConfig();
+    const c=getConfig(),cols=metricColumnCandidates(),select=row.querySelector(".primaryMetricColumn"),current=select.value;
+    select.innerHTML=optionHtml(cols,current||c.metricColumn);
+    select.value=current||c.metricColumn||"";
     row.querySelector(".primaryMetricType").value=c.metric;
-    row.querySelector(".primaryMetricColumn").value=c.metricColumn;
-    row.querySelector(".primaryMetricDenominator").value=c.denominator;
+    row.querySelector(".primaryMetricDenominator").innerHTML=optionHtml(metricColumnCandidates(),c.denominator).replace('<option value="">Select metric column…</option>','');
   };
   sync();
   ["metric","metricColumn","denominatorColumn"].forEach(id=>$(id)?.addEventListener("change",sync));
+  row.querySelector(".primaryMetricColumn").addEventListener("change",e=>{
+    const col=e.target.value;if(!col)return;
+    const type=row.querySelector(".primaryMetricType");type.value=inferMetricType(col);
+    row.querySelector(".primaryMetricName").value=col.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+  });
+  $("addPrimaryMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Primary")));
   $("addSecondaryMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Secondary")));
   $("addGuardrailMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Guardrail")));
 }
@@ -321,6 +362,7 @@ function reportMetricTable(metrics){
   }).join("");
   return '<div class="metric-readout-table"><table><thead><tr><th>Role</th><th>Metric</th><th>Control</th><th>Treatment</th><th>Effect</th><th>p-value</th><th>95% CI</th></tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
 }
+
 function downloadHTML(){
   const c=getConfig(),r=lastResult?.res,series=reportSeries(c),metrics=readMetricPlan(),primary=metrics[0]||{name:"Primary metric",type:c.metric,column:c.metricColumn},title="ExperimentLab · Experiment Readout";
   const effect=r?(c.metric==="binary"?fmt(r.diff*100,2)+" pp":fmt(r.diff,2)):"—",lift=r?pct(r.lift,1):"—",ci=r?(c.metric==="binary"?fmt(r.lo*100,2)+" to "+fmt(r.hi*100,2)+" pp":fmt(r.lo,2)+" to "+fmt(r.hi,2)):"—";
