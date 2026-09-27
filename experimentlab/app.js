@@ -268,6 +268,7 @@ function applyScenario(type){
   if(den) den.value=s.denominator||"denominator";
   if(pre) pre.value=s.pre||"";
   if($("scenarioDescription")) $("scenarioDescription").textContent=s.description;
+  if($("scenarioViewDescription")) $("scenarioViewDescription").textContent=s.description;
   if($("scenarioTitle")) $("scenarioTitle").textContent=s.label;
   load(scenarioData(type),s.label.toLowerCase().replace(/ /g,"-")+".csv");
 }
