@@ -209,7 +209,7 @@ $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";
 $("file").addEventListener("change",e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>loadUploaded(parseCSV(r.result),f.name);r.readAsText(f);}});
 $("loadDemo").onclick=()=>load(demo(),"demo-experiment.csv");
 $("dropzone").addEventListener("dragover",e=>e.preventDefault());$("dropzone").addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){const r=new FileReader();r.onload=()=>loadUploaded(parseCSV(r.result),f.name);r.readAsText(f);}});
-$("downloadHTML").onclick=downloadHTML;$("printPDF").onclick=printPDF;$("runPower").onclick=powerMDE;
+$("downloadHTML").onclick=downloadHTML;$("printPDF").onclick=printPDF;if($("runPower")) $("runPower").onclick=powerMDE;
 load(demo(),"demo-experiment.csv");
 
 /* ExperimentLab scenario + sequential monitoring layer */
