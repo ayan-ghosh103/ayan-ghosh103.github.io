@@ -280,7 +280,38 @@ function syncMetricRowOptions(el,cols){
 }
 function refreshMetricPlanOptions(){
   const cols=metricColumnCandidates();
-  document.querySelectorAll("#metricRows .metric-row").forEach(el=>syncMetricRowOptions(el,cols));
+  const primary=cols.find(k=>/conversion|activation|retention/i.test(k))||cols[0]||"";
+  const p=document.querySelector("#metricRows .primary-metric-row");
+  if(p){
+    const select=p.querySelector(".primaryMetricColumn");
+    if(select){
+      const current=select.value||primary;
+      select.innerHTML=optionHtml(cols,current);
+      select.value=current;
+    }
+    const type=p.querySelector(".primaryMetricType");
+    if(type&&select?.value)type.value=inferMetricType(select.value);
+    const name=p.querySelector(".primaryMetricName");
+    if(name&&(!name.value||name.value==="Primary metric")&&select?.value)name.value=select.value.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+  }
+  document.querySelectorAll("#metricRows .metric-row:not(.primary-metric-row)").forEach(el=>syncMetricRowOptions(el,cols));
+  // Auto-add obvious metrics once after upload so the readout is immediately useful.
+  const host=$("metricRows");
+  if(host && !host.dataset.autoSeeded && cols.length){
+    const existing=[...host.querySelectorAll(".metric-column")].map(x=>x.value);
+    const secondary=cols.find(k=>/gross.?bookings|revenue/i.test(k));
+    const guardrails=cols.filter(k=>/cancel|refund|complaint|failure|error|latency|churn|unsubscribe|bounce|defect/i.test(k));
+    if(secondary && !existing.includes(secondary)){
+      const row=metricPlanRow("Secondary");host.appendChild(row);syncMetricRowOptions(row,cols);row.querySelector(".metric-column").value=secondary;row.querySelector(".metric-name").value=secondary.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+    }
+    if(guardrails.length){
+      guardrails.slice(0,2).forEach(col=>{
+        if(existing.includes(col)||[...host.querySelectorAll(".metric-column")].some(x=>x.value===col))return;
+        const row=metricPlanRow("Guardrail");host.appendChild(row);syncMetricRowOptions(row,cols);row.querySelector(".metric-column").value=col;row.querySelector(".metric-name").value=col.replace(/[_-]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+      });
+    }
+    host.dataset.autoSeeded="1";
+  }
 }
 function readMetricPlan(){
   const c=getConfig();
