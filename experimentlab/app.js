@@ -73,9 +73,23 @@ function inferDataset(rawRows){
   return {rows:out, metric, metricCol, groupCol, treatmentCol, preCol, timeCol, ratioPossible};
 }
 
+function renderDatasetProfile(inferred){
+  const el=$("datasetProfile"); if(!el)return;
+  const items=[
+    {l:"Rows",v:rows.length.toLocaleString(),s:"uploaded records"},
+    {l:"Experiment group",v:inferred.groupCol||inferred.treatmentCol||"Not detected",s:"control / treatment mapping"},
+    {l:"Outcome",v:inferred.metricCol||"Not detected",s:inferred.metric||"metric"},
+    {l:"Pre-period",v:inferred.preCol||"Not detected",s:"CUPED / pre-post candidate"},
+    {l:"Time",v:inferred.timeCol||"Not detected",s:"rollout / temporal candidate"},
+    {l:"Ratio",v:inferred.ratioPossible?"Detected":"Not detected",s:"numerator / denominator candidate"}
+  ];
+  el.innerHTML=items.map(x=>'<div class="card"><small>'+escapeHtml(x.l)+'</small><strong>'+escapeHtml(x.v)+'</strong><span>'+escapeHtml(x.s)+'</span></div>').join("");
+}
+
 function loadUploaded(rawRows,name){
   const inferred=inferDataset(rawRows);
   rows=inferred.rows;
+  renderDatasetProfile(inferred);
   if($("scenario")) $("scenario").value="conversion";
   if($("scenarioTitle")) $("scenarioTitle").textContent="Detected dataset";
   if($("scenarioDescription")) $("scenarioDescription").textContent=inferred.treatmentCol
