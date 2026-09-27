@@ -220,3 +220,19 @@ function renderSequentialMonitoring(){
 
 if($("scenario")) $("scenario").addEventListener("change",e=>applyScenario(e.target.value));
 ["experimentState","lookNumber","plannedLooks","informationFraction"].forEach(id=>{if($(id)) $(id).addEventListener("change",renderSequentialMonitoring);});
+
+function renderScenarioTimeline(){
+  const el=$("scenarioTimeline"); if(!el)return;
+  const type=$("scenario")?.value||"conversion";
+  const labels={conversion:["Design","Randomize","Monitor","Conclude"],gross_bookings:["Baseline","Randomize","Monitor GB","Conclude"],revenue:["Baseline","Randomize","Monitor revenue","Conclude"],ratio:["Define numerator","Define denominator","Monitor ratio","Conclude"],geo:["Select geos","Assign geos","Monitor clusters","Conclude"],staggered:["Define cohorts","Roll out","Event time","Conclude"],prepost:["Pre-period","Intervention","Post-period","Estimate DiD"]};
+  const current=($("experimentState")?.value==="concluded")?3:Math.min(2,Number($("lookNumber")?.value||1)-1);
+  el.innerHTML=(labels[type]||labels.conversion).map((x,i)=>'<div class="timeline-step '+(i<=current?"done":"")+'"><b>0'+(i+1)+'</b><span>'+x+'</span></div>').join("");
+}
+const originalApplyScenario=applyScenario;
+applyScenario=function(type){ originalApplyScenario(type); renderScenarioTimeline(); };
+const originalRenderSequentialMonitoring=renderSequentialMonitoring;
+renderSequentialMonitoring=function(){ originalRenderSequentialMonitoring(); renderScenarioTimeline(); };
+if($("downloadHTML2")) $("downloadHTML2").onclick=downloadHTML;
+if($("printPDF2")) $("printPDF2").onclick=printPDF;
+if($("loadDemo")) $("loadDemo").onclick=()=>load(scenarioData($("scenario")?.value||"conversion"),"demo-experiment.csv");
+renderScenarioTimeline();
