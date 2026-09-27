@@ -226,33 +226,54 @@ function downloadHTML(){
 function printPDF(){window.print();}
 
 function load(data,name){rows=data; $("status").textContent="Loaded "+rows.length.toLocaleString()+" rows"+(name?" · "+name:"")+"."; renderAnalysis();}
-/* Register file/drop inputs before any analysis initialization can fail. */
-$("file").addEventListener("change",e=>{
-  const f=e.target.files&&e.target.files[0];
-  if(!f)return;
-  const r=new FileReader();
-  r.onload=()=>{try{loadUploaded(parseCSV(r.result),f.name);}catch(err){console.error("CSV upload:",err);$("status").textContent="CSV upload error: "+err.message;}};
-  r.onerror=()=>{$("status").textContent="Could not read the CSV file.";};
-  r.readAsText(f);
-});
-$("dropzone").addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="copy";});
-$("dropzone").addEventListener("drop",e=>{
-  e.preventDefault();
-  const f=e.dataTransfer.files&&e.dataTransfer.files[0];
-  if(!f)return;
-  if(!/\.csv$/i.test(f.name)){$("status").textContent="Please drop a CSV file.";return;}
-  const r=new FileReader();
-  r.onload=()=>{try{loadUploaded(parseCSV(r.result),f.name);}catch(err){console.error("CSV drop:",err);$("status").textContent="CSV upload error: "+err.message;}};
-  r.onerror=()=>{$("status").textContent="Could not read the dropped CSV file.";};
-  r.readAsText(f);
-});
+/* CSV ingestion: self-contained and visibly reports every step. */
+function readExperimentCSV(file){
+  if(!file){$("status").textContent="No CSV file selected.";return;}
+  $("status").textContent="Reading "+file.name+"…";
+  const reader=new FileReader();
+  reader.onload=function(){
+    try{
+      const parsed=parseCSV(String(reader.result||""));
+      if(!parsed.length) throw new Error("The CSV has no data rows.");
+      loadUploaded(parsed,file.name);
+    }catch(err){
+      console.error("ExperimentLab CSV:",err);
+      $("status").textContent="CSV error: "+err.message;
+    }
+  };
+  reader.onerror=function(){$("status").textContent="Could not read "+file.name+".";};
+  reader.readAsText(file);
+}
+const csvInput=$("file");
+if(csvInput){
+  csvInput.addEventListener("change",function(e){
+    e.stopPropagation();
+    readExperimentCSV(e.target.files&&e.target.files[0]);
+  },true);
+}
+const csvDrop=$("dropzone");
+if(csvDrop){
+  csvDrop.addEventListener("dragover",function(e){
+    e.preventDefault();e.stopPropagation();
+    e.dataTransfer.dropEffect="copy";
+  },true);
+  csvDrop.addEventListener("drop",function(e){
+    e.preventDefault();e.stopPropagation();
+    const file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+    if(!file)return;
+    if(!/\.csv$/i.test(file.name)){$("status").textContent="Please drop a .csv file.";return;}
+    readExperimentCSV(file);
+  },true);
+}
 $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";$("baseline").value=b?"10":"50";$("baselineSd").disabled=b;$("baselineSd").value=b?"":"20";renderAnalysis();});
 ["metricColumn","denominatorColumn","preColumn","allocation","alpha","power","mde","bootstrap","baseline","baselineSd","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
 
-$("loadDemo").onclick=()=>
+$("loadDemo").onclick=()=>load(scenarioData($("scenario")?.value||"conversion"),"demo-experiment.csv");
+$("downloadHTML").onclick=downloadHTML;
+$("printPDF").onclick=printPDF;
+if($("runPower")) $("runPower").onclick=powerMDE;
 
-$("downloadHTML").onclick=downloadHTML;$("printPDF").onclick=printPDF;if($("runPower")) $("runPower").onclick=powerMDE;
-load(demo(),"demo-experiment.csv");
+// Initial demo load — exactly once.
 load(demo(),"demo-experiment.csv");
 
 /* ExperimentLab scenario + sequential monitoring layer */
