@@ -435,6 +435,16 @@ function initMetricPlan(){
   $("addSecondaryMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Secondary")));
   $("addGuardrailMetric")?.addEventListener("click",()=>host.appendChild(metricPlanRow("Guardrail")));
 }
+function syncPrimaryMetricToAnalysis(){
+  const p=document.querySelector("#metricRows .primary-metric-row");
+  if(!p)return;
+  const col=p.querySelector(".primaryMetricColumn")?.value;
+  const type=p.querySelector(".primaryMetricType")?.value;
+  const den=p.querySelector(".primaryMetricDenominator")?.value;
+  if(col && $("metricColumn"))$("metricColumn").value=col;
+  if(type && $("metric"))$("metric").value=type;
+  if(den && $("denominatorColumn"))$("denominatorColumn").value=den;
+}
 function metricDirectionText(def){
   return def.direction==="down" ? "Lower is better ↓" : "Higher is better ↑";
 }
@@ -522,6 +532,7 @@ $("metric").addEventListener("change",()=>{const b=$("metric").value==="binary";
 
 $("loadDemo").onclick=()=>load(scenarioData($("scenario")?.value||"conversion"),"demo-experiment.csv");
 $("calculateExperiment")?.addEventListener("click",()=>{
+  syncPrimaryMetricToAnalysis();
   renderAnalysis();
   $("status").textContent="Analysis recalculated using the current metric configuration and directions.";
   $("analysis")?.scrollIntoView({behavior:"smooth",block:"start"});
