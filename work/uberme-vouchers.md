@@ -34,6 +34,18 @@ title: UberMe Vouchers — Experimentation & Product Delivery
   <p>The work followed a clear product-data loop: understand the funnel, isolate the points of friction, translate those observations into testable interventions, measure both immediate and downstream behaviour, then use the evidence to guide rollout.</p>
   <p>This kept the analysis tied to product decisions rather than treating experimentation as a reporting exercise. The same evidence was used to discuss rollout risk, potential cannibalization and whether the product was ready to scale further.</p>
 
+
+  <h2>Decision framework</h2>
+  <p>I treated the voucher journey as a sequence rather than a single KPI: <b>share → claim → redeem</b>. That made it possible to distinguish an intervention that created an early funnel lift from one that actually improved downstream voucher utilisation.</p>
+  <p>The analysis therefore connected funnel diagnostics with experiment design and rollout measurement. Product and Engineering could use the evidence to decide which changes were worth shipping and how aggressively they could be scaled.</p>
+
+  <h2>Rollout and risk management</h2>
+  <p>The global rollout introduced a second layer of complexity: an intervention that works in an experiment still needs to be monitored as exposure expands across markets. I supported the staged <b>20% → 50% → 100%</b> rollout by bringing Data Science into the discussion of risk, cannibalization and observed customer behaviour.</p>
+  <p>This was an important part of my ownership: I was not only analysing whether the product worked, but helping Product and Engineering decide <b>how to scale it responsibly</b>.</p>
+
+  <h2>Outcome</h2>
+  <p>The product changes increased the claim rate from <b>30% to 42%</b> and redemption from <b>22% to 37%</b>. The broader rollout subsequently reached <b>50+ countries</b>.</p>
+
   <h2>What this demonstrates</h2>
   <ul>
     <li><b>Experimentation:</b> hypothesis formation, metrics, guardrails and staged testing.</li>
