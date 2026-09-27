@@ -25,4 +25,32 @@
     apply();
   }
 })();
+<script>
+(function(){
+  function demoData(){
+    const r=[];
+    for(let i=0;i<1600;i++){
+      const treatment=i%2, pre=80+Math.random()*40;
+      const conversion=Math.random()<(0.12+(treatment?0.035:0))?1:0;
+      const gross_bookings=Math.max(0,(treatment?52:47)+pre*0.45+(Math.random()-0.5)*35);
+      r.push({treatment,conversion,gross_bookings,pre_metric:pre,country:["UK","US","DE","IN"][i%4]});
+    }
+    return r;
+  }
+  function bind(id,fn){
+    const el=document.getElementById(id);
+    if(el) el.onclick=function(e){e.preventDefault();try{fn(e);}catch(err){console.error(err);}};
+  }
+  bind("loadDemo",function(){
+    if(typeof window.load==="function") window.load(demoData(),"demo-experiment.csv");
+  });
+  bind("downloadHTML",function(){
+    if(typeof window.downloadHTML==="function") window.downloadHTML();
+  });
+  bind("printPDF",function(){window.print();});
+  bind("downloadHTML2",function(){
+    if(typeof window.downloadHTML==="function") window.downloadHTML();
+  });
+  bind("printPDF2",function(){window.print();});
+})();
 </script></body></html>
