@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GenAI Experimentation & Causal Evaluation Platform — Ayan Ghosh</title><link rel="stylesheet" href="./styles.css"></head>
 <body>
-<header><nav><a href="../">AYAN GHOSH</a><div><a href="#overview">Overview</a><a href="#quality">AI Quality</a><a href="#causal">Causal Impact</a><a href="#policy">Policy</a><a href="#method">Method</a></div></nav></header>
+<header><nav><a href="../">AYAN GHOSH</a><div><a href="#overview">Overview</a><a href="#agents">Agents</a><a href="#quality">AI Quality</a><a href="#causal">Causal Impact</a><a href="#policy">Policy</a><a href="#method">Method</a></div></nav></header>
 <main>
 <section class="hero" id="overview"><div class="eyebrow">INDEPENDENT BUILD · GENAI · EXPERIMENTATION · CAUSAL INFERENCE</div>
 <h1>Did the AI feature actually create value?</h1>
@@ -20,6 +20,38 @@ LLM-as-judge → human calibration → prompt/version inference
 product experiment → CUPED / bootstrap → staggered DiD / event study
                          ↓
 CATE / uplift → incremental economics → constrained routing policy</pre></div>
+</section>
+
+
+<section id="agents" class="section agent-section">
+<div class="section-head"><span class="eyebrow">00 · AGENTIC EXECUTION LAYER</span><h2>Agents do the work. The evidence layer decides whether the work is worth shipping.</h2><p>The platform is not a dashboard wrapped around a chatbot. A planner coordinates specialized agents, every agent emits a structured trace, and downstream evaluation treats those traces as first-class experiment data.</p></div>
+<div class="agent-architecture">
+<div class="agent-node orchestrator"><small>ORCHESTRATOR</small><strong>Experiment & Decision Planner</strong><span>Parses the business brief · selects workflow · enforces tool / policy boundaries</span></div>
+<div class="agent-flow">↓</div>
+<div class="agent-grid">
+<article class="agent-card"><div class="agent-icon">01</div><small>PRODUCT AGENT</small><h3>AI Support Agent</h3><p>Decomposes the request, retrieves evidence, calls tools, drafts the response, verifies citations and decides whether to escalate.</p><code>retrieve → tool_call → synthesize → verify → respond</code></article>
+<article class="agent-card"><div class="agent-icon">02</div><small>EVALUATION AGENT</small><h3>Quality & Judge Agent</h3><p>Scores traces across faithfulness, relevance, citation correctness and task completion, then compares automated judgments with human labels.</p><code>score → calibrate → disagree → diagnose</code></article>
+<article class="agent-card"><div class="agent-icon">03</div><small>EXPERIMENT AGENT</small><h3>Experiment Designer</h3><p>Turns a product question into estimands, metrics, treatment arms, rollout design, power requirements and monitoring checks.</p><code>brief → estimand → metrics → design → monitor</code></article>
+<article class="agent-card"><div class="agent-icon">04</div><small>CAUSAL AGENT</small><h3>Causal Analyst</h3><p>Checks identification assumptions before selecting A/B, staggered DiD, event study or synthetic control and produces an auditable effect estimate.</p><code>diagnose → estimate → robustness → explain</code></article>
+<article class="agent-card"><div class="agent-icon">05</div><small>CAUSAL ML AGENT</small><h3>Heterogeneity Analyst</h3><p>Fits out-of-sample CATE / uplift models, evaluates policy value on holdout data and surfaces segments where treatment economics differ.</p><code>fit → cross-fit → CATE → policy_value</code></article>
+<article class="agent-card"><div class="agent-icon">06</div><small>POLICY AGENT</small><h3>Economic Router</h3><p>Combines causal effect, customer contribution, AI cost, capacity, latency and risk constraints into an explicit routing policy.</p><code>τ(X) → value − cost → constraints → route</code></article>
+</div>
+</div>
+<div class="trace-console">
+<div class="trace-head"><div><span class="eyebrow">LIVE TRACE · SYNTHETIC RUN</span><h3>Agent run: “Should we roll out the new support assistant?”</h3></div><span class="status-pill">COMPLETED · 8.7s</span></div>
+<div class="trace-grid">
+<div class="trace-list" id="traceList">
+<button class="trace-step active" data-trace="0"><b>01</b><span>Planner</span><em>brief parsed</em></button>
+<button class="trace-step" data-trace="1"><b>02</b><span>Product Agent</span><em>6 tools called</em></button>
+<button class="trace-step" data-trace="2"><b>03</b><span>Evaluation Agent</span><em>240 traces scored</em></button>
+<button class="trace-step" data-trace="3"><b>04</b><span>Causal Agent</span><em>DiD + event study</em></button>
+<button class="trace-step" data-trace="4"><b>05</b><span>Causal ML Agent</span><em>4 segments</em></button>
+<button class="trace-step" data-trace="5"><b>06</b><span>Policy Agent</span><em>68% routing</em></button>
+</div>
+<div class="trace-detail" id="traceDetail"></div>
+</div>
+</div>
+<div class="callout agent-callout"><b>Agentic design principle:</b> agents are decision-making components, not black boxes. Each run records agent version, model, tool calls, inputs, outputs, latency, token usage, cost, confidence and downstream validation status. That trace can become the unit of analysis for reliability and product experimentation.</div>
 </section>
 
 <section id="quality" class="section"><div class="section-head"><span class="eyebrow">01 · EVALUATION ENGINEERING</span><h2>Response quality is necessary, not sufficient.</h2><p>The platform evaluates each answer on multiple dimensions, then tests whether the automated judge behaves like a calibrated measurement system.</p></div>
