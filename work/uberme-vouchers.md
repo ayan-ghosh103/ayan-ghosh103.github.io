@@ -3,7 +3,7 @@ layout: default
 title: UberMe Vouchers — Experimentation & Product Delivery
 ---
 <section class="case-page">
-  <a class="back-link" href="/#work">← Back to selected work</a>
+  <a class="button primary back-home" href="/">← Back to home</a>
   <div class="eyebrow">UBER · EXPERIMENTATION · PRODUCT · GLOBAL ROLLOUT</div>
   <h1>UberMe Vouchers</h1>
   <p class="case-lead">Turning an ambiguous product opportunity into experiments, product decisions and a globally scalable rollout strategy.</p>
