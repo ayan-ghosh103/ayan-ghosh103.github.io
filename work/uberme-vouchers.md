@@ -1,0 +1,38 @@
+---
+layout: default
+title: UberMe Vouchers — Experimentation & Product Delivery
+---
+<section class="case-page">
+  <a class="back-link" href="/#work">← Back to selected work</a>
+  <div class="eyebrow">UBER · EXPERIMENTATION · PRODUCT · GLOBAL ROLLOUT</div>
+  <h1>UberMe Vouchers</h1>
+  <p class="case-lead">Turning an ambiguous product opportunity into experiments, product decisions and a globally scalable rollout strategy.</p>
+
+  <div class="case-meta"><span><b>Role</b> Scientist II · Data Science</span><span><b>Focus</b> Experimentation · Product Analytics · GTM</span><span><b>Partners</b> Product · Engineering</span></div>
+
+  <h2>The problem</h2>
+  <p>UberMe is a peer-to-peer voucher product where users can share vouchers with other riders. The product challenge was broader than improving a single conversion metric: we needed to understand where users were dropping out of the journey, identify interventions that could improve voucher utilisation, and evaluate whether those changes were safe to scale.</p>
+
+  <h2>My role</h2>
+  <p>I led the data science work end-to-end, partnering with Product and Engineering from problem framing through experimentation, interpretation and rollout. I defined hypotheses, success metrics and guardrails, designed analyses and translated the evidence into product and rollout decisions.</p>
+
+  <h2>Finding the product friction</h2>
+  <p>I analysed the voucher journey across sharing, claiming and redemption to understand low-intent behaviour and identify points where users were failing to progress. This led to experiments around recipient selection and voucher time-to-live.</p>
+
+  <h2>Experimentation</h2>
+  <p>A representative intervention combined improvements to recipient selection with extending voucher TTL from 24 to 48 hours. The analysis focused not only on conversion, but on whether the intervention improved downstream voucher utilisation and preserved relevant product guardrails.</p>
+  <div class="impact"><b>30 → 42%</b> claim rate · <b>22 → 37%</b> redemption rate</div>
+
+  <h2>Global rollout strategy</h2>
+  <p>I was the <b>Data Science point of contact for the global rollout strategy</b>. This meant working with Product and Engineering to assess evidence and risks as the product moved through progressive rollout stages.</p>
+  <p>My role included evaluating potential <b>cannibalization</b>, identifying analytical and product risks, monitoring the relevant outcomes and using experiment and customer evidence to support scaling decisions across markets.</p>
+  <div class="impact"><b>20% → 50% → 100%</b> progressive rollout · deployment across <b>50+ countries</b></div>
+
+  <h2>What this demonstrates</h2>
+  <ul>
+    <li><b>Experimentation:</b> hypothesis formation, metrics, guardrails and staged testing.</li>
+    <li><b>Product Data Science:</b> translating behavioural analysis into product interventions.</li>
+    <li><b>FDE / Solutions Engineering:</b> working across Product and Engineering to turn analysis into a shipped and scalable solution.</li>
+    <li><b>Business ownership:</b> bringing risk, cannibalization and rollout considerations into the technical decision.</li>
+  </ul>
+</section>
