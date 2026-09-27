@@ -113,3 +113,18 @@ Important limitations:
 8. Automated experiment report with charts and assumptions
 9. Dedicated PDF generation
 10. Richer interactive visualisations
+
+
+## Experiment scenarios
+
+ExperimentLab includes scenario presets for: conversion experiment; Gross Bookings experiment; revenue experiment; ratio metric; geo experiment; staggered rollout; and pre/post intervention. These are scenario generators and design scaffolds; the methodology identifies where production-grade clustered or causal inference is required.
+
+## Running vs concluded experiments and peeking
+
+The workbench separates monitoring from final inference. While an experiment is running, configure the current look, planned number of looks and information fraction. The monitoring view shows the nominal p-value for diagnostics but does not repeatedly apply the final alpha threshold. Instead it displays an approximate O'Brien–Fleming-style sequential boundary: z_boundary = z_(1-alpha/2) / sqrt(information_fraction). This is more conservative early and approaches the final alpha threshold as information accumulates.
+
+A crossed boundary is not an automatic ship decision. The stopping rule, metric guardrails, experiment integrity and business criteria should be specified before launch.
+
+After the experiment concludes, the concluded view uses the pre-specified final alpha and final analysis population. The UI makes the distinction explicit so a nominal p-value observed halfway through an experiment is not treated as equivalent to the final inferential decision.
+
+For production experimentation, use a formally specified group-sequential design or alpha-spending procedure before launch. The browser implementation is an approximate O'Brien–Fleming-style educational/proof-of-work implementation.
