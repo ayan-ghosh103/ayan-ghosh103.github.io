@@ -1,5 +1,6 @@
 ---
 layout: default
+permalink: /work/uberme-vouchers/
 title: UberMe Vouchers — Experimentation & Product Delivery
 ---
 <section class="case-page">
