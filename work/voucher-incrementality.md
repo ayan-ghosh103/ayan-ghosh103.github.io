@@ -3,7 +3,7 @@ layout: default
 title: Voucher Incrementality — Causal Inference
 ---
 <section class="case-page">
-  <a class="back-link" href="/#work">← Back to selected work</a>
+  <a class="button primary back-home" href="/">← Back to home</a>
   <div class="eyebrow">UBER · CAUSAL INFERENCE · INCREMENTALITY · VOUCHER PORTFOLIO</div>
   <h1>Measuring the incremental value of vouchers</h1>
   <p class="case-lead">Separating genuine incremental business impact from activity that would have happened anyway.</p>
