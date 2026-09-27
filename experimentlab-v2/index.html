@@ -59,43 +59,53 @@
     const r=[];
     for(let i=0;i<1600;i++){
       const treatment=i%2, pre=80+Math.random()*40;
-      const conversion=Math.random()<(treatment?0.155:0.12)?1:0;
-      const gross_bookings=Math.max(0,(treatment?52:47)+pre*.45+(Math.random()-.5)*35);
-      r.push({treatment,conversion,gross_bookings,pre_metric:pre,country:["UK","US","DE","IN"][i%4]});
+      r.push({
+        treatment:treatment,
+        conversion:Math.random()<(treatment?0.155:0.12)?1:0,
+        gross_bookings:Math.max(0,(treatment?52:47)+pre*.45+(Math.random()-.5)*35),
+        pre_metric:pre,
+        country:["UK","US","DE","IN"][i%4]
+      });
     }
     return r;
   }
-  function csv(rows){
-    const keys=Object.keys(rows[0]);
-    return [keys.join(","),...rows.map(r=>keys.map(k=>r[k]).join(","))].join("\n");
-  }
   function directDemo(){
-    const rows=demoRows();
+    const data=demoRows();
     const status=document.getElementById("status");
-    if(status) status.textContent="Demo data ready · "+rows.length.toLocaleString()+" rows · click Run analysis controls below.";
+    if(status) status.textContent="Demo data loaded · "+data.length.toLocaleString()+" rows · conversion experiment.";
     const profile=document.getElementById("datasetProfile");
-    if(profile) profile.innerHTML='<div class="card"><small>Rows</small><strong>'+rows.length.toLocaleString()+'</strong><span>demo records</span></div><div class="card"><small>Experiment group</small><strong>treatment</strong><span>0 / 1</span></div><div class="card"><small>Outcome</small><strong>conversion</strong><span>binary metric</span></div>';
-    if(window.load) try{window.load(rows,"demo-experiment.csv");}catch(e){console.error(e);}
+    if(profile) profile.innerHTML=
+      '<div class="card"><small>Rows</small><strong>'+data.length.toLocaleString()+'</strong><span>demo records</span></div>'+
+      '<div class="card"><small>Experiment group</small><strong>treatment</strong><span>0 / 1</span></div>'+
+      '<div class="card"><small>Outcome</small><strong>conversion</strong><span>binary metric</span></div>';
+    const metric=document.getElementById("metric");
+    const col=document.getElementById("metricColumn");
+    const pre=document.getElementById("preColumn");
+    if(metric)metric.value="binary";
+    if(col)col.value="conversion";
+    if(pre)pre.value="pre_metric";
+    if(typeof window.__experimentRows!=="undefined") window.__experimentRows=data;
+    try{
+      if(typeof load==="function") load(data,"demo-experiment.csv");
+    }catch(e){console.error("ExperimentLab demo load:",e);}
   }
   function directReport(){
     const main=document.querySelector("main");
     if(!main)return;
-    const html='<!doctype html><html><head><meta charset="utf-8"><title>ExperimentLab Report</title><style>body{font:14px Arial;max-width:1000px;margin:40px auto;line-height:1.5}section{margin:30px 0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}</style></head><body><h1>ExperimentLab Report</h1>'+main.innerHTML+'</body></html>';
+    const title="ExperimentLab Report";
+    const html='<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>body{font:14px Arial;max-width:1000px;margin:40px auto;line-height:1.5}section{margin:30px 0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px}.actions{display:none}</style></head><body><h1>'+title+'</h1>'+main.innerHTML+'</body></html>';
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([html],{type:"text/html"}));
-    a.download="experimentlab-report.html";
+    a.href=url;a.download="experimentlab-report.html";
     document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }
-  function bind(id,fn){
-    const el=document.getElementById(id);
-    if(!el)return;
-    el.addEventListener("click",fn);
-  }
-  bind("loadDemo",function(e){e.preventDefault();directDemo();});
-  bind("downloadHTML",function(e){e.preventDefault();directReport();});
-  bind("printPDF",function(e){e.preventDefault();window.print();});
-  bind("downloadHTML2",function(e){e.preventDefault();directReport();});
-  bind("printPDF2",function(e){e.preventDefault();window.print();});
+  const demo=document.getElementById("loadDemo");
+  if(demo){demo.onclick=null;demo.addEventListener("click",function(e){e.preventDefault();directDemo();},true);}
+  const report=document.getElementById("downloadHTML");
+  if(report){report.onclick=null;report.addEventListener("click",function(e){e.preventDefault();directReport();},true);}
+  const report2=document.getElementById("downloadHTML2");
+  if(report2){report2.onclick=null;report2.addEventListener("click",function(e){e.preventDefault();directReport();},true);}
 })();
-</script></body></html>
+</script></script></body></html>
