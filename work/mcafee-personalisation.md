@@ -4,8 +4,7 @@ permalink: /work/mcafee-personalisation/
 title: McAfee Personalisation & Recommendation Systems
 ---
 <section class="case-page">
-  <a class="button primary back-home" href="/">← Back to home</a>
-  <div class="eyebrow">MCAFEE · MACHINE LEARNING · PERSONALISATION · RECOMMENDATIONS</div>
+  <div class="case-header"><div class="eyebrow">MCAFEE · MACHINE LEARNING · PERSONALISATION · RECOMMENDATIONS</div><a class="button primary back-home" href="/">← Back to home</a></div>
   <h1>Personalised product recommendations & customer segmentation</h1>
   <p class="case-lead">Using behavioural signals to improve product relevance, target retention interventions and support commercial decisions.</p>
 
