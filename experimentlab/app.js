@@ -262,6 +262,7 @@ function renderDecision(c,res,boot){
   $("decision").innerHTML='<div class="evidence-summary"><div class="evidence-intro"><strong>Evidence summary</strong><span class="muted">Observed treatment movement is interpreted using each metric’s configured success direction.</span></div>'+rowsHtml+'</div><p class="muted">This is an evidence summary, not an automatic ship/no-ship recommendation. Consider uncertainty, guardrails, experiment integrity and pre-specified decision criteria together.</p>';
 }
 function didModule(){
+  if(!$("didPre")||!$("didPost")||!$("didResult"))return;
   const pre=$("didPre").value.trim(), post=$("didPost").value.trim(); if(!pre||!post){$("didResult").textContent="Configure pre/post outcome columns to run DiD.";return;}
   const c=getConfig(), groups={cpre:[],cpost:[],tpre:[],tpost:[]};
   rows.forEach(r=>{const t=Number(r.treatment);const preV=num(r[pre]),postV=num(r[post]);if(Number.isNaN(preV)||Number.isNaN(postV))return;if(t){groups.tpre.push(preV);groups.tpost.push(postV)}else{groups.cpre.push(preV);groups.cpost.push(postV)}});
@@ -269,15 +270,18 @@ function didModule(){
   $("didResult").innerHTML='<strong>DiD estimate:</strong> '+fmt(did)+' '+(c.metric==="binary"?"absolute outcome units":"metric units")+'.<br><span class="muted">Formula: (Treatment post − Treatment pre) − (Control post − Control pre). This simple module assumes parallel trends and a clean treatment timing structure.</span>';
 }
 function staggeredModule(){
+  if(!$("timeColumn")||!$("cohortColumn")||!$("staggeredResult"))return;
   const time=$("timeColumn").value.trim(); if(!time){$("staggeredResult").textContent="Provide a time column plus first-treatment period to use the staggered design explorer.";return;}
   const cohort=$("cohortColumn").value.trim(); if(!cohort){$("staggeredResult").textContent="Provide a first-treatment cohort column.";return;}
   const cohorts=[...new Set(rows.map(r=>r[cohort]).filter(x=>x!==""&&x!=="control"))];$("staggeredResult").innerHTML='<strong>Design check:</strong> detected '+cohorts.length+' treatment cohorts. Use cohort/event-time plots and cohort-specific effects rather than a single naive two-way fixed-effects estimate when treatment timing varies.<br><span class="muted">ExperimentLab currently provides a design diagnostic here; cohort-specific estimators are the next inference layer.</span>';
 }
 function syntheticModule(){
+  if(!$("unitColumn")||!$("timeColumn")||!$("syntheticResult"))return;
   const unit=$("unitColumn").value.trim(), time=$("timeColumn").value.trim(); if(!unit||!time){$("syntheticResult").textContent="Provide unit and time columns to configure a synthetic-control analysis.";return;}
   $("syntheticResult").innerHTML='<strong>Configured:</strong> '+escapeHtml(unit)+' as unit and '+escapeHtml(time)+' as time. Synthetic control requires a treated unit, donor pool, pre-treatment period and an outcome column. The next step is donor-weight optimisation and pre-period fit diagnostics.';
 }
 function tmleModule(){
+  if(!$("tmleTreatment")||!$("tmleOutcome")||!$("tmleCovariates")||!$("tmleResult"))return;
   const treatment=$("tmleTreatment").value.trim(), outcome=$("tmleOutcome").value.trim(), covars=$("tmleCovariates").value.trim(); if(!treatment||!outcome||!covars){$("tmleResult").textContent="Configure treatment, binary outcome and covariates for the TMLE setup.";return;}
   $("tmleResult").innerHTML='<strong>TMLE setup:</strong> treatment='+escapeHtml(treatment)+', outcome='+escapeHtml(outcome)+', covariates='+escapeHtml(covars)+'.<br><span class="muted">The browser MVP documents the estimand and required nuisance models; production TMLE should use cross-fitting, positivity checks and influence-curve based uncertainty.</span>';
 }
@@ -576,7 +580,7 @@ if(csvDrop){
   },true);
 }
 $("metric").addEventListener("change",()=>{renderAnalysis();});
-["metricColumn","denominatorColumn","preColumn","allocation","alpha","bootstrap","planningPower","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id).addEventListener("change",renderAnalysis));
+["metricColumn","denominatorColumn","preColumn","allocation","alpha","bootstrap","planningPower","didPre","didPost","timeColumn","cohortColumn","unitColumn","tmleTreatment","tmleOutcome","tmleCovariates"].forEach(id=>$(id)?.addEventListener("change",renderAnalysis));
 
 
 
@@ -787,7 +791,7 @@ function renderSequentialMonitoring(){
 }
 
 if($("scenario")) $("scenario").addEventListener("change",e=>applyScenario(e.target.value));
-["experimentState","lookNumber","plannedLooks","informationFraction"].forEach(id=>{if($(id)) $(id).addEventListener("change",renderSequentialMonitoring);});
+["experimentState","lookNumber","plannedLooks","informationFraction"].forEach(id=>{if($(id)){ $(id).addEventListener("change",renderSequentialMonitoring); $(id).addEventListener("input",renderSequentialMonitoring); }});
 
 function renderScenarioTimeline(){
   const el=$("scenarioTimeline"); if(!el)return;
