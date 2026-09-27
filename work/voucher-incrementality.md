@@ -37,6 +37,18 @@ title: Voucher Incrementality — Causal Inference
   <p>Voucher performance can look strong in descriptive reporting even when a portion of the observed activity would have occurred without the intervention. Measuring incrementality therefore changes the decision from “how much activity did vouchers generate?” to “how much additional activity did vouchers cause?”</p>
   <p>The answer was used as decision support for voucher investment and prioritisation, making the causal estimate more useful than a simple before-and-after comparison.</p>
 
+
+  <h2>Counterfactual thinking</h2>
+  <p>The central analytical challenge was constructing a credible estimate of what would have happened in the absence of the voucher. The appropriate counterfactual depended on how treatment was assigned and rolled out, so the analysis had to start with the treatment structure rather than with a preferred statistical technique.</p>
+  <p>For time-based comparisons, I used Difference-in-Differences and staggered DiD. Where a direct untreated comparison was weaker, Synthetic Control provided a way to construct a comparison from untreated units. TMLE provided another treatment-effect estimation approach where flexible covariate adjustment was appropriate.</p>
+
+  <h2>Assumptions and robustness</h2>
+  <p>I evaluated the underlying treatment timing, comparison groups and pre-treatment behaviour when interpreting the estimates. Where rollout structure provided future-treated groups or holdouts, those groups were useful for strengthening the counterfactual.</p>
+  <p>The emphasis was on understanding what each design could credibly identify and using multiple sources of evidence rather than presenting a single causal estimate without context.</p>
+
+  <h2>From causal estimate to product decision</h2>
+  <p>The output was ultimately a business decision input. Incremental Trips and Gross Bookings were translated into evidence about the value of different voucher interventions, helping inform investment and prioritisation across the voucher portfolio.</p>
+
   <h2>What this demonstrates</h2>
   <ul>
     <li><b>Experimentation & causal inference:</b> matching methodology to treatment structure and assumptions.</li>
