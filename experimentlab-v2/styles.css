@@ -15,8 +15,8 @@
 
 /* Multi-metric planning + prominent recalculation action */
 .calculate-row{display:flex;align-items:center;gap:14px;margin-top:12px;padding-top:12px;border-top:1px solid #e6eaee;flex-wrap:wrap}
-.calculate-row .calculate-btn{background:#16803a;color:#fff;border-color:#16803a;font-weight:700;padding:11px 18px}
-.calculate-row .calculate-btn:hover{background:#126b30}
+.calculate-row .calculate-btn{background:var(--accent);color:#090c10;border-color:var(--accent);font-weight:800;padding:11px 18px;border-radius:999px;min-height:44px}
+.calculate-row .calculate-btn:hover{filter:brightness(.94)}
 .calculate-row span{font-size:.86rem;color:#68737d}
 .planning-card{border:1px solid #e3e7eb;border-radius:10px;padding:18px;margin:14px 0;background:#fff}
 .planning-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
